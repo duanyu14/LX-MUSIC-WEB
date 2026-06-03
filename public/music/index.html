@@ -1055,6 +1055,13 @@
                         </ul>
                     </li>
                     <li>
+                        <a href="#" onclick="switchTab('my-songs')" id="tab-my-songs"
+                            class="flex items-center px-6 py-3 t-text-muted hover:t-bg-main transition-colors duration-200">
+                            <i class="fas fa-music w-6 text-center"></i>
+                            <span class="ml-3 font-medium">我的歌曲</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="#" onclick="switchTab('localmusic')" id="tab-localmusic"
                             class="flex items-center px-6 py-3 t-text-muted hover:t-bg-main transition-colors duration-200">
                             <i class="fas fa-compact-disc w-6 text-center"></i>
@@ -1913,6 +1920,87 @@
                     </div>
                 </div>
 
+                <!-- My Songs View (Playlists from WebDAV) -->
+                <div id="view-my-songs"
+                    class="absolute inset-0 flex flex-col px-2 pt-2 md:px-6 md:pt-6 pb-44 md:pb-32 hidden opacity-0 transition-all duration-300 overflow-hidden">
+                    
+                    <!-- Header Area -->
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-1.5 md:gap-3 mb-1.5 md:mb-2 shrink-0 px-1">
+                        <div class="flex items-center justify-between md:justify-start w-full md:w-auto gap-2">
+                            <div class="flex items-baseline gap-1 md:gap-1.5">
+                                <h2 class="text-sm md:text-base font-bold t-text-main whitespace-nowrap">我的歌曲</h2>
+                                <span id="my-songs-total-count" class="text-[9px] md:text-[10px] t-text-muted opacity-60 whitespace-nowrap">共 0 首</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Search Box -->
+                        <div class="flex-1 max-w-xs md:max-w-sm">
+                            <div class="relative">
+                                <input type="text" id="my-songs-search" placeholder="搜索歌曲..."
+                                    class="w-full px-3 pl-8 py-1.5 bg-gray-100 dark:bg-gray-700/50 border t-border-main rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
+                                    oninput="searchMySongs(this.value)">
+                                <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-xs t-text-muted"></i>
+                                <button id="my-songs-search-clear" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs t-text-muted hover:text-red-500 opacity-0 transition-opacity"
+                                        onclick="clearMySongsSearch()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="refreshMySongs()" class="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700/50 rounded-lg hover:bg-amber-500 hover:text-white transition-all" title="刷新">
+                                <i class="fas fa-sync-alt text-xs"></i>
+                            </button>
+                            <button onclick="playAllMySongs()" class="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all" title="播放全部">
+                                <i class="fas fa-play text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Playlists Tabs and Song List Container -->
+                    <div class="flex-1 flex flex-col md:flex-row gap-3 overflow-hidden">
+                        
+                        <!-- Mobile: Playlist Toggle Button -->
+                        <div class="flex md:hidden items-center justify-between px-2 py-2 bg-white/50 dark:bg-gray-800/50 rounded-xl border t-border-main mb-2">
+                            <button id="my-songs-playlist-toggle" onclick="toggleMySongsPlaylistPanel()" 
+                                class="flex items-center gap-2 w-full">
+                                <i class="fas fa-list text-sm"></i>
+                                <span id="my-songs-current-playlist-mobile" class="text-sm font-medium t-text-main flex-1 text-left">请选择歌单</span>
+                                <i id="my-songs-playlist-arrow" class="fas fa-chevron-down text-xs t-text-muted"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Playlists Sidebar -->
+                        <div id="my-songs-playlist-panel" class="w-48 md:w-64 shrink-0 flex flex-col bg-white/50 dark:bg-gray-800/50 rounded-xl border t-border-main overflow-hidden hidden md:block">
+                            <div class="p-3 border-b t-border-main">
+                                <h3 class="text-xs font-bold t-text-muted uppercase tracking-wider">歌单列表</h3>
+                            </div>
+                            <div id="my-songs-playlists" class="flex-1 overflow-y-auto custom-scrollbar">
+                                <div class="p-3 text-sm t-text-muted text-center">暂无歌单</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Song List -->
+                        <div class="flex-1 flex flex-col bg-white/50 dark:bg-gray-800/50 rounded-xl border t-border-main overflow-hidden">
+                            <div class="p-3 border-b t-border-main flex items-center justify-between">
+                                <div>
+                                    <h3 id="my-songs-current-playlist" class="text-sm font-bold t-text-main">请选择歌单</h3>
+                                    <span id="my-songs-list-count" class="text-[10px] t-text-muted">0 首歌</span>
+                                </div>
+                            </div>
+                            <div id="my-songs-list" class="flex-1 overflow-y-auto custom-scrollbar p-2">
+                                <div class="flex items-center justify-center h-full">
+                                    <div class="text-center t-text-muted">
+                                        <i class="fas fa-music text-4xl mb-3 opacity-30"></i>
+                                        <p class="text-sm">请选择歌单</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Local Music View -->
                 <div id="view-localmusic"
                     class="absolute inset-0 flex flex-col px-2 pt-2 md:px-6 md:pt-6 pb-44 md:pb-32 hidden opacity-0 transition-all duration-300 overflow-hidden">
@@ -2476,6 +2564,72 @@
 
                                 <div id="sync-status" class="mt-3 text-sm text-gray-500 flex items-center gap-2">
                                     <i class="fas fa-circle text-[8px] text-gray-300"></i> 状态: 未连接
+                                </div>
+
+                                <!-- Playlists WebDAV Sync Settings -->
+                                <div class="mt-6 pt-4 border-t t-border-main">
+                                    <h4 class="text-sm font-bold t-text-main flex items-center gap-2 mb-3">
+                                        <i class="fas fa-list-music text-amber-500"></i> 歌曲歌单同步 (Playlists WebDAV)
+                                        <span class="setting-tooltip-trigger ml-1">
+                                            <i class="fas fa-question-circle text-[10px]"></i>
+                                            <span class="setting-tooltip-content">配置WebDAV服务器来同步playlists.json文件，实现歌单备份与恢复。</span>
+                                        </span>
+                                    </h4>
+                                    
+                                    <div class="space-y-3">
+                                        <!-- WebDAV Server URL -->
+                                        <div>
+                                            <label class="block text-xs font-bold t-text-muted mb-1">服务器地址 (URL)</label>
+                                            <input type="text" id="playlists-webdav-url" placeholder="https://dav.jianguoyun.com/dav/"
+                                                class="w-full px-4 py-2 border t-border-main rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+                                                onchange="savePlaylistsWebDAVConfig()">
+                                        </div>
+                                        
+                                        <!-- WebDAV Username -->
+                                        <div>
+                                            <label class="block text-xs font-bold t-text-muted mb-1">用户名 (Username)</label>
+                                            <input type="text" id="playlists-webdav-user" placeholder="用户名或邮箱"
+                                                class="w-full px-4 py-2 border t-border-main rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+                                                onchange="savePlaylistsWebDAVConfig()">
+                                        </div>
+                                        
+                                        <!-- WebDAV Password -->
+                                        <div>
+                                            <label class="block text-xs font-bold t-text-muted mb-1">密码 (Password)</label>
+                                            <input type="password" id="playlists-webdav-pass" placeholder="密码或应用密码"
+                                                class="w-full px-4 py-2 border t-border-main rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+                                                onchange="savePlaylistsWebDAVConfig()">
+                                        </div>
+                                        
+                                        <!-- WebDAV Path -->
+                                        <div>
+                                            <label class="block text-xs font-bold t-text-muted mb-1">路径 (Path)</label>
+                                            <input type="text" id="playlists-webdav-path" placeholder="/playlists.json"
+                                                class="w-full px-4 py-2 border t-border-main rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+                                                onchange="savePlaylistsWebDAVConfig()">
+                                        </div>
+                                        
+                                        <!-- Action Buttons -->
+                                        <div class="flex gap-2">
+                                            <button onclick="testPlaylistsWebDAVConnection()"
+                                                class="flex-1 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors shadow-md text-sm flex items-center justify-center gap-2">
+                                                <i class="fas fa-plug"></i> 测试
+                                            </button>
+                                            <button onclick="syncPlaylistsFromWebDAV()"
+                                                class="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors shadow-md text-sm flex items-center justify-center gap-2">
+                                                <i class="fas fa-download"></i> 拉取
+                                            </button>
+                                            <button onclick="syncPlaylistsToWebDAV()"
+                                                class="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition-colors shadow-md text-sm flex items-center justify-center gap-2">
+                                                <i class="fas fa-upload"></i> 上传
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- Connection Status -->
+                                        <div id="playlists-webdav-status" class="text-xs t-text-muted flex items-center gap-2">
+                                            <i class="fas fa-circle text-[8px] text-gray-300"></i> 状态: 未配置
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- Token Management Section (Shown after local login) -->
@@ -5498,6 +5652,7 @@
     <script src="js/quality.js"></script>
     <script src="js/idb_store.js"></script>
     <script src="js/user_sync.js"></script>
+    <script src="js/playlists_webdav.js"></script>
     <script src="js/batch_pagination.js"></script>
     <script src="js/single_song_ops.js"></script>
     <script src="js/theme_manager.js"></script>

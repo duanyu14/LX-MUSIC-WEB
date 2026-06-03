@@ -4780,6 +4780,88 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
         return
       }
 
+      // Playlists WebDAV Test Connection API
+      if (pathname === '/api/webdav/test-playlists' && req.method === 'POST') {
+        void readBody(req).then(async body => {
+          try {
+            const { url, username: davUsername, password } = JSON.parse(body)
+            
+            // 动态创建临时WebDAV客户端
+            const { createClient } = await import('webdav')
+            const client = createClient(url, {
+              username: davUsername,
+              password,
+            })
+
+            // 尝试获取目录内容来测试连接
+            await client.getDirectoryContents('/')
+
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: true, message: 'Connection successful' }))
+          } catch (err: any) {
+            console.error('[Playlists WebDAV] Test connection error:', err.message)
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: false, message: err.message || 'Connection failed' }))
+          }
+        })
+        return
+      }
+
+      // Playlists WebDAV Fetch API
+      if (pathname === '/api/webdav/fetch' && req.method === 'POST') {
+        void readBody(req).then(async body => {
+          try {
+            const { url, username: davUsername, password, path: filePath } = JSON.parse(body)
+            
+            // 动态创建临时WebDAV客户端
+            const { createClient } = await import('webdav')
+            const client = createClient(url, {
+              username: davUsername,
+              password,
+            })
+
+            // 获取文件内容
+            const content = await client.getFileContents(filePath) as Buffer
+            const data = content.toString('utf-8')
+
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: true, data }))
+          } catch (err: any) {
+            console.error('[Playlists WebDAV] Fetch error:', err.message)
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: false, message: err.message || 'Failed to fetch file' }))
+          }
+        })
+        return
+      }
+
+      // Playlists WebDAV Upload API
+      if (pathname === '/api/webdav/upload' && req.method === 'POST') {
+        void readBody(req).then(async body => {
+          try {
+            const { url, username: davUsername, password, path: filePath, data } = JSON.parse(body)
+            
+            // 动态创建临时WebDAV客户端
+            const { createClient } = await import('webdav')
+            const client = createClient(url, {
+              username: davUsername,
+              password,
+            })
+
+            // 上传文件内容
+            await client.putFileContents(filePath, data, { contentLength: false })
+
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: true }))
+          } catch (err: any) {
+            console.error('[Playlists WebDAV] Upload error:', err.message)
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: false, message: err.message || 'Failed to upload file' }))
+          }
+        })
+        return
+      }
+
       // WebDAV Sync File API
       if (pathname === '/api/webdav/sync-file' && req.method === 'POST') {
         const auth = req.headers['x-frontend-auth']

@@ -680,6 +680,9 @@ function switchTab(tabId) {
 
     if (tabId === 'songlist') {
         document.getElementById('page-title').innerText = "歌单";
+        if (window.SongListManager && !window.SongListManager.initialized) {
+            window.SongListManager.init();
+        }
     }
 
     if (tabId === 'leaderboard') {
@@ -691,6 +694,14 @@ function switchTab(tabId) {
 
     if (tabId === 'localmusic') {
         document.getElementById('page-title').innerText = "本地音乐";
+    }
+
+    if (tabId === 'my-songs') {
+        document.getElementById('page-title').innerText = "我的歌曲";
+        // 刷新歌单数据
+        if (typeof refreshMySongs === 'function') {
+            refreshMySongs();
+        }
     }
 
     // Collapse Favorites if leaving
@@ -2241,6 +2252,7 @@ function getImgUrl(item) {
         (s.meta && (s.meta.img || s.meta.pic)) ||
         '/music/assets/logo.svg';
 }
+window.getImgUrl = getImgUrl;
 
 // List search logic is now handled by ListSearch service in list_search.js
 function renderResults(list) {

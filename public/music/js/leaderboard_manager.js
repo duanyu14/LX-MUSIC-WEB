@@ -29,7 +29,7 @@ window.LeaderboardManager = (function () {
 
         // 优先从缓存读取
         const cachedSource = localStorage.getItem('lb-source-select');
-        state.source = cachedSource || 'wy';
+        state.source = cachedSource || 'qq';
 
         // 同步 source select 的值
         const sel = document.getElementById('lb-source-select');

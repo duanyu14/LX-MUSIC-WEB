@@ -5,6 +5,7 @@
 
 window.SongListManager = (function () {
     const API_BASE = '/api/music';
+    let initialized = false;
     let currentState = {
         source: 'wy',
         tagId: '',
@@ -31,6 +32,9 @@ window.SongListManager = (function () {
 
     // Initialize
     function init() {
+        if (initialized) return;
+        initialized = true;
+
         console.log('[SongList] Initializing...');
 
         // 优先从缓存读取
@@ -544,6 +548,8 @@ window.SongListManager = (function () {
     // --- Public Methods ---
 
     return {
+        get initialized() { return initialized; },
+
         init,
         selectTag: function (id, name) {
             currentState.tagId = id;
