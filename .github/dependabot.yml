@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    target-branch: "dev"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "message2call"
+  - package-ecosystem: "npm"
+    directory: "/docs"
+    target-branch: "dev"
+    schedule:
+      interval: "monthly"

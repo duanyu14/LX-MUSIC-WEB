@@ -1,0 +1,42 @@
+[
+    {
+        "comment": "=== 欢迎标语 ===",
+        "id": "welcome_slogan_v1",
+        "status": "active",
+        "type": "broadcast",
+        "logic": {
+            "interval_hours": -1
+        },
+        "ui": {
+            "title": "🎉 欢迎使用lxserver",
+            "message": "在这个纯净的音乐世界里，每一秒都是享受。\n祝您听歌愉快！",
+            "confirm_text": "开始探索",
+            "cancel_text": ""
+        },
+        "action": {
+            "type": "close"
+        }
+    },
+    {
+        "comment": "=== 版本更新 v1.9.3 ===",
+        "id": "update_v1_9_3",
+        "status": "active",
+        "type": "version",
+        "logic": {
+            "target_version": "v1.9.3",
+            "operator": "<",
+            "interval_hours": 24
+        },
+        "ui": {
+            "title": "发现新版本 v1.9.3",
+            "date": "2026-05-06",
+            "message": "本次更新增加了多项实用功能并优化了存储系统：\n1. 🛠️ 存储升级：引入 IndexedDB 替代 LocalStorage，彻底解决大规模歌单下的空间不足问题 (#160)。\n2. 🔑 快捷接入：新增登录状态实时查看面板及快捷操作入口 (#162)。\n3. 📝 歌词嵌入：支持将歌词内容直接嵌入歌曲元数据，方便本地管理 (#163)。\n4. 🔍 筛选增强：筛选面板支持多选操作，找歌更灵活。\n5. 🐛 问题修复：修复了浏览器下载失效 (#164) 及特定环境下无法进入播放器 (#167) 的问题。\n6. ✨ UI 优化：进一步优化了部分界面元素的视觉展示。",
+            "confirm_text": "立即查看",
+            "cancel_text": "稍后提醒"
+        },
+        "action": {
+            "type": "link",
+            "url": "https://github.com/duanyu14/LX-MUSIC-WEB/releases/tag/v1.9.3"
+        }
+    }
+]
