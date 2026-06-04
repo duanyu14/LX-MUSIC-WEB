@@ -22,6 +22,145 @@ function checkForUpdates() {
     }
 }
 
+// 解析 changelog 获取版本列表
+function parseChangelogVersions(content) {
+    const versions = [];
+    // 匹配 ## 🎉 vX.X.X (YYYY-MM-DD) 格式（支持 emoji）
+    const versionRegex = /^##\s*[\p{Emoji}]*\s*v([\d.]+)\s+\((\d{4}-\d{2}-\d{2})\)/gmu;
+    let match;
+    while ((match = versionRegex.exec(content)) !== null) {
+        versions.push({
+            version: match[1],
+            date: match[2],
+            fullMatch: match[0]
+        });
+    }
+    return versions;
+}
+
+// 获取指定版本的内容
+function getVersionContent(content, version) {
+    // 匹配 ## 🎉 vX.X.X (YYYY-MM-DD) 格式（支持 emoji）
+    const versionPattern = new RegExp(`##\\s*[\\p{Emoji}]*\\s*v${version.replace(/\./g, '\\.')}\\s+\\(\\d{4}-\\d{2}-\\d{2}\\)[\\s\\S]*?(?=##\\s*[\\p{Emoji}]*\\s*v|$)`, 'u');
+    const match = content.match(versionPattern);
+    return match ? match[0] : '';
+}
+
+// 显示更新日志
+async function showChangelog() {
+    // 创建模态框
+    const modal = document.createElement('div');
+    modal.id = 'changelog-modal';
+    modal.className = 'fixed inset-0 flex items-center justify-center p-4';
+    modal.style.zIndex = '10000'; // 高于播放栏的 z-index: 9999
+    modal.innerHTML = `
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeChangelogModal(event)" style="z-index: 10000;"></div>
+        <div class="relative t-bg-panel rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col" style="z-index: 10001;">
+            <div class="flex items-center justify-between p-6 border-b t-border-main">
+                <h2 class="text-xl font-bold t-text-main flex items-center gap-2">
+                    <i class="fas fa-book text-emerald-500"></i>
+                    更新日志
+                </h2>
+                <button onclick="closeChangelogModal(event)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    <i class="fas fa-times t-text-muted"></i>
+                </button>
+            </div>
+            <!-- 版本选择栏 -->
+            <div id="changelog-version-bar" class="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 border-b t-border-main">
+                <label class="text-sm t-text-muted mr-3">选择版本:</label>
+                <select id="changelog-version-select" class="bg-white dark:bg-gray-700 border t-border-main rounded-lg px-3 py-1.5 text-sm t-text-main focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                    <option value="">加载中...</option>
+                </select>
+                <span id="changelog-date" class="ml-3 text-xs t-text-muted"></span>
+            </div>
+            <div id="changelog-content" class="flex-1 overflow-y-auto p-6 custom-scrollbar" style="max-height: calc(85vh - 140px);">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/3"></div>
+                    <div class="h-4 bg-gray-200 rounded w-full"></div>
+                    <div class="h-4 bg-gray-200 rounded w-full"></div>
+                    <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    try {
+        const response = await fetch('/api/changelog');
+        if (!response.ok) throw new Error('获取更新日志失败');
+        
+        const content = await response.text();
+        const versions = parseChangelogVersions(content);
+        
+        // 填充版本选择下拉框
+        const select = document.getElementById('changelog-version-select');
+        const dateSpan = document.getElementById('changelog-date');
+        select.innerHTML = '';
+        
+        versions.forEach((v, index) => {
+            const option = document.createElement('option');
+            option.value = v.version;
+            option.textContent = `v${v.version}`;
+            if (index === 0) {
+                option.selected = true;
+                dateSpan.textContent = v.date;
+            }
+            select.appendChild(option);
+        });
+        
+        // 默认显示最新版本
+        const latestVersion = versions[0];
+        displayVersionContent(content, latestVersion.version);
+        
+        // 添加版本切换事件
+        select.addEventListener('change', () => {
+            const selectedVersion = select.value;
+            const selected = versions.find(v => v.version === selectedVersion);
+            if (selected) {
+                dateSpan.textContent = selected.date;
+                displayVersionContent(content, selectedVersion);
+            }
+        });
+        
+    } catch (e) {
+        console.error('Failed to load changelog:', e);
+        const container = document.getElementById('changelog-content');
+        container.innerHTML = '<p class="text-red-500 text-center py-8">加载更新日志失败，请稍后重试。</p>';
+    }
+}
+
+// 显示指定版本的内容
+function displayVersionContent(content, version) {
+    const container = document.getElementById('changelog-content');
+    const versionContent = getVersionContent(content, version);
+    
+    if (versionContent) {
+        if (window.marked && window.marked.parse) {
+            container.innerHTML = `<div class="prose prose-emerald dark:prose-invert max-w-none">${window.marked.parse(versionContent)}</div>`;
+        } else {
+            container.innerHTML = `<pre class="whitespace-pre-wrap t-text-main text-sm">${versionContent}</pre>`;
+        }
+        // 滚动到顶部
+        container.scrollTop = 0;
+    } else {
+        container.innerHTML = '<p class="text-red-500 text-center py-8">未找到该版本的更新日志</p>';
+    }
+}
+
+function closeChangelogModal(event) {
+    // 如果点击的是模态框背景或关闭按钮，才关闭
+    if (!event || event.target.id === 'changelog-modal' || event.target.tagName === 'BUTTON') {
+        const modal = document.getElementById('changelog-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+}
+
+// 将函数暴露到全局
+window.showChangelog = showChangelog;
+window.closeChangelogModal = closeChangelogModal;
+
 const API_BASE = '/api/music';
 let currentPage = 1;
 window.currentPage = 1;

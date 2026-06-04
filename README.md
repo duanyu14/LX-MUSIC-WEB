@@ -8,7 +8,7 @@
   <h1>LX Sync Server</h1> -->
   <p>
     <img src="https://img.shields.io/badge/build-passing-brightgreen?style=flat-square" alt="Build Status">
-    <img src="https://img.shields.io/badge/version-v1.9.4-blue?style=flat-square" alt="Version">
+    <img src="https://img.shields.io/badge/version-v1.9.5-blue?style=flat-square" alt="Version">
     <img src="https://img.shields.io/badge/node-%3E%3D16-green?style=flat-square" alt="Node Version">
     <img src="https://img.shields.io/github/license/duanyu14/LX-MUSIC-WEB?style=flat-square" alt="License">
     <br>
@@ -237,12 +237,8 @@ npm start
 
 ## 🛡️ 数据收集与隐私说明
 
-本项目集成了 PostHog 匿名数据统计，主要用于：
-
-1. **Bug 追踪**: 收集版本号、环境类型。
-2. **通知推送**: 弹出 **版本更新提醒** 与 **紧急维护公告**。
-
-- **绝对匿名**: 绝不收集 IP、用户名或具体歌单内容。
+- **匿名统计**: 本项目已移除所有第三方数据统计服务。
+- **隐私保护**: 所有数据仅存储在您的本地服务器中。
 - **关闭方法**: 环境变量设置 `DISABLE_TELEMETRY=true`。**注意：关闭后将无法收到新版本通知。**
 
 ---

@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LX Music Web</title>
-    <!-- Config MUST be loaded before PostHog -->
     <script>
         (function () {
             var pathname = window.location.pathname;
@@ -16,14 +15,7 @@
             console.log('[PWA] Base href set to:', baseHref);
         })();
     </script>
-    <script src="/js/config.js"></script>
-    <!-- PostHog Analytics -->
-    <script>
-        if (!window.CONFIG || !window.CONFIG.disableTelemetry) {
-            !function (t, e) { var o, n, p, r; e.__SV || (window.posthog = e, e._i = [], e.init = function (i, s, a) { function g(t, e) { var o = e.split("."); 2 == o.length && (t = t[o[0]], e = o[1]), t[e] = function () { t.push([e].concat(Array.prototype.slice.call(arguments, 0))) } } (p = t.createElement("script")).type = "text/javascript", p.async = !0, p.src = s.api_host + "/static/array.js", (r = t.getElementsByTagName("script")[0]).parentNode.insertBefore(p, r); var u = e; for (void 0 !== a ? u = e[a] = [] : a = "posthog", u.people = u.people || [], u.toString = function (t) { var e = "posthog"; return "posthog" !== a && (e += "." + a), t || (e += " (stub)"), e }, u.people.toString = function () { return u.toString(1) + ".people (stub)" }, o = "capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys onSessionId".split(" "), n = 0; n < o.length; n++)g(u, o[n]); e._i.push([i, s, a]) }, e.__SV = 1) }(document, window.posthog || []);
-            posthog.init('phc_vvaqX7sm3RqmiqRbMCjETTc67XKjgqeMgmYHvsZr30f', { api_host: 'https://us.i.posthog.com' })
-        }
-    </script>
+    <script src="/js/config.js"></script></function></seed:tool_call>
     <link rel="icon" href="/music/assets/logo.svg" type="image/svg+xml">
     <link rel="manifest" href="/music/manifest.json">
     <link rel="stylesheet" href="css/theme_variables.css">
@@ -3964,14 +3956,14 @@
                             <div class="h-4 bg-gray-200 rounded w-2/3"></div>
                         </div>
 
-                        <!-- Check for Updates Button -->
+                        <!-- Changelog Button -->
                         <div class="mt-8 pt-8 border-t t-border-main flex flex-col items-center gap-4">
-                            <button onclick="checkForUpdates()"
+                            <button onclick="showChangelog()"
                                 class="flex items-center gap-2 px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-100 transition-all hover:scale-105 active:scale-95 text-sm font-bold group">
-                                <i class="fas fa-sync-alt group-hover:rotate-180 transition-transform duration-500"></i>
-                                检查版本更新
+                                <i class="fas fa-book group-hover:rotate-12 transition-transform duration-300"></i>
+                                更新日志
                             </button>
-                            <p class="text-xs t-text-muted">点击通过云端检查是否有新版本可用</p>
+                            <p class="text-xs t-text-muted">点击查看版本更新历史</p>
                         </div>
                     </div>
                 </div>

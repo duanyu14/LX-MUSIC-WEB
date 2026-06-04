@@ -4248,6 +4248,25 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
         return
       }
 
+      // 获取更新日志
+      if (pathname === '/api/changelog' && req.method === 'GET') {
+        try {
+          const changelogPath = path.join(process.cwd(), 'changelog.md')
+          if (fs.existsSync(changelogPath)) {
+            const content = fs.readFileSync(changelogPath, 'utf-8')
+            res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8' })
+            res.end(content)
+          } else {
+            res.writeHead(404, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: false, error: 'changelog.md 文件不存在' }))
+          }
+        } catch (err: any) {
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ success: false, error: err.message }))
+        }
+        return
+      }
+
       if (pathname === '/api/custom-source/validate' && req.method === 'POST') {
         return customSourceHandlers.handleValidate(req, res)
       }

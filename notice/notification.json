@@ -18,17 +18,17 @@
         }
     },
     {
-        "comment": "=== 版本更新 v1.9.4 ===",
-        "id": "update_v1_9_4",
+        "comment": "=== 版本更新 v1.9.5 ===",
+        "id": "update_v1_9_5",
         "status": "active",
         "type": "version",
         "logic": {
-            "target_version": "v1.9.4",
+            "target_version": "v1.9.5",
             "operator": "<",
             "interval_hours": 24
         },
         "ui": {
-            "title": "发现新版本 v1.9.4",
+            "title": "发现新版本 v1.9.5",
             "date": "2026-06-03",
             "message": "本次更新新增了歌曲歌单 WebDAV 同步功能：\n1. 🎵 我的歌曲：新增\"我的歌曲\"页面，支持查看和播放从 WebDAV 同步的歌单。\n2. ☁️ WebDAV 配置：在数据同步设置中新增 Playlists WebDAV 配置，支持配置服务器地址、用户名、密码和文件路径。\n3. 🔄 同步功能：支持测试连接、拉取歌单、上传歌单。\n4. 🔍 搜索功能：\"我的歌曲\"页面支持实时搜索歌曲名、歌手名、专辑名。\n5. 📱 移动端适配：针对手机端进行了布局优化，支持歌单面板展开/收起交互。",
             "confirm_text": "立即查看",
@@ -36,7 +36,7 @@
         },
         "action": {
             "type": "link",
-            "url": "https://github.com/duanyu14/LX-MUSIC-WEB/releases/tag/v1.9.4"
+            "url": "https://github.com/duanyu14/LX-MUSIC-WEB/releases/tag/v1.9.5"   
         }
     }
 ]
