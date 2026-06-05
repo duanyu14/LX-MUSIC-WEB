@@ -48,32 +48,33 @@ function getVersionContent(content, version) {
 
 // 显示更新日志
 async function showChangelog() {
+    console.log("[Changelog] showChangelog called");
+    
     // 创建模态框
     const modal = document.createElement('div');
     modal.id = 'changelog-modal';
-    modal.className = 'fixed inset-0 flex items-center justify-center p-4';
-    modal.style.zIndex = '10000'; // 高于播放栏的 z-index: 9999
+    modal.className = 'fixed inset-0 flex items-center justify-center p-2 md:p-4 z-[10000]';
     modal.innerHTML = `
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeChangelogModal(event)" style="z-index: 10000;"></div>
-        <div class="relative t-bg-panel rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col" style="z-index: 10001;">
-            <div class="flex items-center justify-between p-6 border-b t-border-main">
-                <h2 class="text-xl font-bold t-text-main flex items-center gap-2">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeChangelogModal(event)"></div>
+        <div class="relative t-bg-panel rounded-2xl shadow-2xl w-full max-w-md md:max-w-4xl max-h-[90vh] md:max-h-[85vh] overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between p-4 md:p-6 border-b t-border-main">
+                <h2 class="text-lg md:text-xl font-bold t-text-main flex items-center gap-2">
                     <i class="fas fa-book text-emerald-500"></i>
                     更新日志
                 </h2>
-                <button onclick="closeChangelogModal(event)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                    <i class="fas fa-times t-text-muted"></i>
+                <button onclick="closeChangelogModal(event)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+                    <i class="fas fa-times t-text-muted text-lg"></i>
                 </button>
             </div>
             <!-- 版本选择栏 -->
-            <div id="changelog-version-bar" class="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 border-b t-border-main">
-                <label class="text-sm t-text-muted mr-3">选择版本:</label>
-                <select id="changelog-version-select" class="bg-white dark:bg-gray-700 border t-border-main rounded-lg px-3 py-1.5 text-sm t-text-main focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <div id="changelog-version-bar" class="px-4 md:px-6 py-2 md:py-3 bg-gray-50 dark:bg-gray-800/50 border-b t-border-main flex flex-wrap items-center gap-2">
+                <label class="text-sm t-text-muted">选择版本:</label>
+                <select id="changelog-version-select" class="bg-white dark:bg-gray-700 border t-border-main rounded-lg px-3 py-2 text-sm t-text-main focus:outline-none focus:ring-2 focus:ring-emerald-400 min-w-[120px]">
                     <option value="">加载中...</option>
                 </select>
-                <span id="changelog-date" class="ml-3 text-xs t-text-muted"></span>
+                <span id="changelog-date" class="text-xs t-text-muted"></span>
             </div>
-            <div id="changelog-content" class="flex-1 overflow-y-auto p-6 custom-scrollbar" style="max-height: calc(85vh - 140px);">
+            <div id="changelog-content" class="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar" style="max-height: calc(90vh - 120px);">
                 <div class="animate-pulse space-y-4">
                     <div class="h-8 bg-gray-200 rounded w-1/3"></div>
                     <div class="h-4 bg-gray-200 rounded w-full"></div>
@@ -84,13 +85,21 @@ async function showChangelog() {
         </div>
     `;
     document.body.appendChild(modal);
+    console.log("[Changelog] Modal created and appended to DOM");
     
     try {
+        console.log("[Changelog] Fetching changelog from /api/changelog");
         const response = await fetch('/api/changelog');
-        if (!response.ok) throw new Error('获取更新日志失败');
+        if (!response.ok) {
+            console.error("[Changelog] Failed to fetch changelog, status:", response.status);
+            throw new Error('获取更新日志失败');
+        }
         
         const content = await response.text();
+        console.log("[Changelog] Changelog fetched successfully, length:", content.length, "chars");
+        
         const versions = parseChangelogVersions(content);
+        console.log("[Changelog] Parsed versions:", versions.length);
         
         // 填充版本选择下拉框
         const select = document.getElementById('changelog-version-select');
@@ -107,9 +116,11 @@ async function showChangelog() {
             }
             select.appendChild(option);
         });
+        console.log("[Changelog] Version dropdown populated");
         
         // 默认显示最新版本
         const latestVersion = versions[0];
+        console.log("[Changelog] Displaying latest version:", latestVersion?.version);
         displayVersionContent(content, latestVersion.version);
         
         // 添加版本切换事件
@@ -119,6 +130,7 @@ async function showChangelog() {
             if (selected) {
                 dateSpan.textContent = selected.date;
                 displayVersionContent(content, selectedVersion);
+                console.log("[Changelog] Version changed to:", selectedVersion);
             }
         });
         
@@ -739,6 +751,8 @@ function changeQualityPreference(quality) {
 
 // Tab Switching
 function switchTab(tabId) {
+    console.log("[UI] switchTab called with tabId:", tabId);
+    
     document.querySelectorAll('[id^="view-"]').forEach(el => {
         el.classList.add('hidden');
         el.classList.remove('opacity-100');
@@ -746,12 +760,17 @@ function switchTab(tabId) {
     });
     // special handling for favorites
     if (tabId === 'favorites' && currentListData) {
+        console.log("[UI] switchTab: Handling favorites tab");
         handleFavoritesClick();
         return;
     }
 
     const activeView = document.getElementById(`view-${tabId}`);
-    if (!activeView) return;
+    if (!activeView) {
+        console.error("[UI] switchTab: View not found for tabId:", tabId);
+        return;
+    }
+    console.log("[UI] switchTab: Found view element:", `view-${tabId}`);
 
     activeView.classList.remove('hidden');
     // small delay to allow display block to apply before opacity transition
@@ -759,11 +778,15 @@ function switchTab(tabId) {
         activeView.classList.remove('opacity-0');
         activeView.classList.add('opacity-100');
         // [新增] 切换 Tab 时顺便检查并更新一次用户状态
-        if (typeof updateUserUI === 'function') updateUserUI();
+        if (typeof updateUserUI === 'function') {
+            updateUserUI();
+            console.log("[UI] switchTab: Updated user UI");
+        }
     }, 10);
 
     // [新增] 切换到设置页面时刷新一次管理员状态和设置项 UI
     if (tabId === 'settings') {
+        console.log("[UI] switchTab: Refreshing settings UI");
         if (typeof syncSettingsUI === 'function') syncSettingsUI();
         else if (typeof updateAdminUI === 'function') updateAdminUI();
     }
@@ -1264,8 +1287,11 @@ const SOURCES = ['kw', 'kg', 'tx', 'wy', 'mg'];
 
 //搜索歌曲
 async function doSearch(page = 1, append = false, prefetch = false) {
+    console.log("[Search] doSearch called - page:", page, "append:", append, "prefetch:", prefetch);
+    
     const typeEl = document.getElementById('search-type');
     const type = typeEl ? typeEl.value : 'song';
+    console.log("[Search] Search type:", type);
 
     // 触发搜索时隐藏联想词
     if (typeof hideSearchSuggestions === 'function') hideSearchSuggestions();
@@ -1281,13 +1307,16 @@ async function doSearch(page = 1, append = false, prefetch = false) {
 
     const input = document.getElementById('search-input').value.trim();
     const resultsContainer = document.getElementById('search-results');
+    console.log("[Search] Search query:", input ? `"${input}"` : "empty");
 
     // Local Search Logic
     const isLibrarySearch = currentSearchScope === 'lib_artists' || currentSearchScope === 'lib_albums';
     const isLocalSongSearch = type === 'song' && (currentSearchScope === 'local_list' || currentSearchScope === 'local_all');
+    console.log("[Search] Search scope:", currentSearchScope, "- isLibrarySearch:", isLibrarySearch, "- isLocalSongSearch:", isLocalSongSearch);
 
     if (isLibrarySearch || isLocalSongSearch) {
         if (!input) {
+            console.log("[Search] Empty input, rendering default view for scope:", currentSearchScope);
             if (currentSearchScope === 'lib_artists') renderLibraryArtists(window.libraryData.artists);
             else if (currentSearchScope === 'lib_albums') renderLibraryAlbums(window.libraryData.albums);
             else renderResults(viewingPlaylist);
@@ -3542,6 +3571,8 @@ function playFromView(index) {
 window.playFromView = playFromView;
 
 async function playSong(song, index, forceQuality = null, noPlay = false, isRetry = false, shouldAddToDefault = null) {
+    console.log("[Player] playSong called - song:", song.name, "index:", index, "forceQuality:", forceQuality, "noPlay:", noPlay, "isRetry:", isRetry);
+    
     // 1. Debounce / Lock: If already loading this song, ignore click
     // [Fix] Allow retry to bypass this check
     if (currentLoadingSongId === song.id && !isRetry) {
@@ -3551,15 +3582,19 @@ async function playSong(song, index, forceQuality = null, noPlay = false, isRetr
 
     // 2. New Song Request: Update target
     const thisRequestSongId = song.id;
+    console.log("[Player] Starting load for song:", song.name, "id:", thisRequestSongId);
+    
     // Clear any pending auto-skip timer
     if (window._autoSkipTimer) {
         clearTimeout(window._autoSkipTimer);
         window._autoSkipTimer = null;
+        console.log("[Player] Cleared pending auto-skip timer");
     }
 
     const thisRequestId = ++loadingRequestCounter;
     currentLoadingSongId = thisRequestSongId;
     currentLoadingRequestId = thisRequestId;
+    console.log("[Player] Assigned request ID:", thisRequestId);
 
     currentIndex = index;
     // [Random Prefetch Fix] 一旦开始正式播放一首歌曲，清除之前的预选索引，以便下一轮重新生成
@@ -3569,13 +3604,17 @@ async function playSong(song, index, forceQuality = null, noPlay = false, isRetr
     window.currentPlayingSong = song; // expose for lyric-card.js
     updatePlayerInfo(song);
     updateMediaSessionMetadata(song);
+    console.log("[Player] Updated player info and media session metadata");
+    
     // 异步触发歌词抓取，初步尝试（此时音质可能尚未最终确定，但在 playSong 后续逻辑中会再次同步）
     fetchLyric(song);
+    console.log("[Player] Triggered lyric fetch");
 
     // Refresh queue UI if drawer is open to update active indicator
     const queueDrawer = document.getElementById('queue-drawer');
     if (queueDrawer && !queueDrawer.classList.contains('translate-x-full')) {
         renderQueue();
+        console.log("[Player] Refreshed queue UI");
     }
 
     // [Fix] 切换歌曲前强制重置手动滚动状态
@@ -4184,20 +4223,26 @@ function updatePlayerInfo(song) {
 }
 
 async function togglePlay() {
+    console.log("[Player] togglePlay called, current state:", audio.paused ? "paused" : "playing");
+    
     // 忽略因为长按触发的 click 事件
     if (window.playBtnIsLongPress) {
         window.playBtnIsLongPress = false;
+        console.log("[Player] Ignoring long press triggered click");
         return;
     }
 
     if (audio.paused) {
         try {
+            console.log("[Player] Starting playback");
             // [Crossfade] 如果开启了淡入淡出，先将进度置为 0，播放后再淡入
             if (settings.enableCrossfade) {
                 audio.volume = 0;
+                console.log("[Player] Crossfade enabled, starting with volume 0");
             }
             await audio.play();
             updatePlayButton(true);
+            console.log("[Player] Playback started successfully");
 
             if (settings.enableCrossfade) {
                 fadeVolume(typeof currentVolume !== 'undefined' ? currentVolume : 1, 600);
@@ -4206,6 +4251,7 @@ async function togglePlay() {
             console.error("[Player] Play blocked:", e);
         }
     } else {
+        console.log("[Player] Pausing playback");
         // [Crossfade] 如果开启了淡入淡出，先淡出再暂停
         if (settings.enableCrossfade) {
             await fadeVolume(0, 600);
@@ -4216,6 +4262,7 @@ async function togglePlay() {
             window._autoSkipTimer = null;
         }
         updatePlayButton(false);
+        console.log("[Player] Playback paused");
     }
 }
 
@@ -4252,7 +4299,12 @@ function playNext(depth = 0) {
 }
 
 function playPrev() {
-    if (currentPlaylist.length === 0) return;
+    console.log("[Player] playPrev called, currentIndex:", currentIndex, "playlistLength:", currentPlaylist.length, "playMode:", playMode);
+    
+    if (currentPlaylist.length === 0) {
+        console.log("[Player] playPrev: No songs in playlist");
+        return;
+    }
 
     let prevIndex;
 
@@ -4260,6 +4312,7 @@ function playPrev() {
         case 'single':
             // 单曲循环：继续播放当前歌曲
             prevIndex = currentIndex;
+            console.log("[Player] playPrev: Single mode, staying at index", prevIndex);
             break;
 
         case 'random':
@@ -4271,6 +4324,7 @@ function playPrev() {
                     prevIndex = Math.floor(Math.random() * currentPlaylist.length);
                 } while (prevIndex === currentIndex);
             }
+            console.log("[Player] playPrev: Random mode, selected index", prevIndex);
             break;
 
         case 'order':
@@ -4279,6 +4333,7 @@ function playPrev() {
             // 列表循环 & 顺序播放：播放上一首
             prevIndex = currentIndex - 1;
             if (prevIndex < 0) prevIndex = currentPlaylist.length - 1;
+            console.log("[Player] playPrev: List/Order mode, going to index", prevIndex);
             break;
     }
 
@@ -11083,17 +11138,47 @@ window.getCurrentActiveListId = function () {
 function toggleSidebar() {
     const sidebar = document.getElementById('main-sidebar');
     const backdrop = document.getElementById('mobile-sidebar-backdrop');
+    
+    if (!sidebar) {
+        console.error("[UI] toggleSidebar: Sidebar element not found");
+        return;
+    }
+    
+    const isClosed = sidebar.classList.contains('-translate-x-full');
+    console.log("[UI] toggleSidebar called - current state:", isClosed ? "closed" : "open");
 
-    if (sidebar.classList.contains('-translate-x-full')) {
+    if (isClosed) {
         // Open
         sidebar.classList.remove('-translate-x-full');
         sidebar.classList.add('translate-x-0');
         backdrop.classList.remove('hidden');
+        console.log("[UI] toggleSidebar: Opening sidebar");
     } else {
         // Close
         sidebar.classList.remove('translate-x-0');
         sidebar.classList.add('-translate-x-full');
         backdrop.classList.add('hidden');
+        console.log("[UI] toggleSidebar: Closing sidebar");
+    }
+}
+
+// Initialize sidebar state on page load
+function initSidebarState() {
+    const sidebar = document.getElementById('main-sidebar');
+    const backdrop = document.getElementById('mobile-sidebar-backdrop');
+    
+    if (!sidebar) return;
+    
+    if (window.innerWidth >= 1025) {
+        // Desktop: Show sidebar
+        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.add('translate-x-0');
+        if (backdrop) backdrop.classList.add('hidden');
+    } else {
+        // Mobile: Hide sidebar by default
+        sidebar.classList.remove('translate-x-0');
+        sidebar.classList.add('-translate-x-full');
+        if (backdrop) backdrop.classList.add('hidden');
     }
 }
 
@@ -11113,6 +11198,51 @@ window.addEventListener('resize', () => {
         }
     }
 });
+
+// Mobile Swipe Gesture Support
+(function initSwipeGestures() {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    const minSwipeDistance = 50;
+    const maxVerticalDeviation = 100;
+
+    document.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+    }, { passive: true });
+
+    function handleSwipe() {
+        const horizontalDistance = touchEndX - touchStartX;
+        const verticalDistance = Math.abs(touchEndY - touchStartY);
+        const sidebar = document.getElementById('main-sidebar');
+        
+        if (!sidebar || window.innerWidth >= 1025) return;
+
+        // Check if vertical swipe is not too much (to avoid accidental triggers during scrolling)
+        if (verticalDistance > maxVerticalDeviation) return;
+
+        // Swipe right from left edge (open sidebar)
+        if (horizontalDistance > minSwipeDistance && touchStartX < 50) {
+            if (sidebar.classList.contains('-translate-x-full')) {
+                toggleSidebar();
+            }
+        }
+        // Swipe left (close sidebar)
+        else if (horizontalDistance < -minSwipeDistance) {
+            if (sidebar.classList.contains('translate-x-0')) {
+                toggleSidebar();
+            }
+        }
+    }
+})();
 
 // 切换详情页封面显示（移动端优化）
 function toggleDetailCover() {

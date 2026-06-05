@@ -589,6 +589,53 @@
             -webkit-user-select: none !important;
         }
 
+        /* Mobile Touch Optimization */
+        @media (max-width: 1024px) {
+            /* Remove tap highlight on mobile */
+            * {
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+            }
+
+            /* Increase touch target size */
+            button, a, [onclick], input, select, textarea {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            /* Smooth scrolling */
+            html {
+                scroll-behavior: smooth;
+                overscroll-behavior-y: none;
+            }
+
+            /* Prevent text selection on UI elements */
+            nav, header, footer, .sidebar, .player-controls {
+                user-select: none;
+                -webkit-user-select: none;
+            }
+
+            /* Better touch feedback */
+            button:active, a:active, [onclick]:active {
+                opacity: 0.7;
+                transform: scale(0.98);
+                transition: all 0.1s ease;
+            }
+
+            /* Prevent callout on long press */
+            img, .no-callout {
+                -webkit-touch-callout: none;
+            }
+        }
+
+        /* Desktop hover effects (not on touch devices) */
+        @media (hover: hover) {
+            button:hover, a:hover, [onclick]:hover {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
         /* Silky Animation for Player Detail */
         #view-player-detail {
             transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease-out !important;
@@ -1002,30 +1049,30 @@
                 <ul>
                     <li>
                         <a href="#" onclick="switchTab('search')" id="tab-search"
-                            class="active-tab flex items-center px-6 py-3 hover:t-bg-main transition-colors duration-200">
-                            <i class="fas fa-search w-6 text-center"></i>
+                            class="active-tab flex items-center px-6 py-4 hover:t-bg-main transition-colors duration-200 min-h-[48px]">
+                            <i class="fas fa-search w-6 text-center text-lg"></i>
                             <span class="ml-3 font-medium">搜索</span>
                         </a>
                     </li>
                     <li>
                         <a href="#" onclick="switchTab('songlist')" id="tab-songlist"
-                            class="flex items-center px-6 py-3 t-text-muted hover:t-bg-main transition-colors duration-200">
-                            <i class="fas fa-list-ul w-6 text-center"></i>
+                            class="flex items-center px-6 py-4 t-text-muted hover:t-bg-main transition-colors duration-200 min-h-[48px]">
+                            <i class="fas fa-list-ul w-6 text-center text-lg"></i>
                             <span class="ml-3 font-medium">歌单</span>
                         </a>
                     </li>
                     <li>
                         <a href="#" onclick="switchTab('leaderboard')" id="tab-leaderboard"
-                            class="flex items-center px-6 py-3 t-text-muted hover:t-bg-main transition-colors duration-200">
-                            <i class="fas fa-chart-bar w-6 text-center"></i>
+                            class="flex items-center px-6 py-4 t-text-muted hover:t-bg-main transition-colors duration-200 min-h-[48px]">
+                            <i class="fas fa-chart-bar w-6 text-center text-lg"></i>
                             <span class="ml-3 font-medium">排行榜</span>
                         </a>
                     </li>
                     <li>
                         <div onclick="handleFavoritesClick()" id="tab-favorites"
-                            class="flex items-center justify-between px-6 py-3 t-text-muted hover:t-bg-main transition-colors duration-200 cursor-pointer select-none">
+                            class="flex items-center justify-between px-6 py-4 t-text-muted hover:t-bg-main transition-colors duration-200 cursor-pointer select-none min-h-[48px]">
                             <div class="flex items-center">
-                                <i class="fas fa-folder w-6 text-center"></i>
+                                <i class="fas fa-folder w-6 text-center text-lg"></i>
                                 <span class="ml-3 font-medium">我的收藏</span>
                             </div>
                             <i id="favorites-arrow"
@@ -1040,7 +1087,7 @@
                             </li>
                             <li class="px-6 pb-4">
                                 <button onclick="handleCreateList()"
-                                    class="w-full py-1.5 border border-dashed border-gray-300 rounded text-xs text-gray-500 hover:text-emerald-500 hover:border-emerald-400 transition-colors flex items-center justify-center gap-1">
+                                    class="w-full py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:text-emerald-500 hover:border-emerald-400 transition-colors flex items-center justify-center gap-1 min-h-[40px]">
                                     <i class="fas fa-plus"></i> 新建歌单
                                 </button>
                             </li>
@@ -1048,29 +1095,29 @@
                     </li>
                     <li>
                         <a href="#" onclick="switchTab('my-songs')" id="tab-my-songs"
-                            class="flex items-center px-6 py-3 t-text-muted hover:t-bg-main transition-colors duration-200">
-                            <i class="fas fa-music w-6 text-center"></i>
+                            class="flex items-center px-6 py-4 t-text-muted hover:t-bg-main transition-colors duration-200 min-h-[48px]">
+                            <i class="fas fa-music w-6 text-center text-lg"></i>
                             <span class="ml-3 font-medium">我的歌曲</span>
                         </a>
                     </li>
                     <li>
                         <a href="#" onclick="switchTab('localmusic')" id="tab-localmusic"
-                            class="flex items-center px-6 py-3 t-text-muted hover:t-bg-main transition-colors duration-200">
-                            <i class="fas fa-compact-disc w-6 text-center"></i>
+                            class="flex items-center px-6 py-4 t-text-muted hover:t-bg-main transition-colors duration-200 min-h-[48px]">
+                            <i class="fas fa-compact-disc w-6 text-center text-lg"></i>
                             <span class="ml-3 font-medium">本地音乐</span>
                         </a>
                     </li>
                     <li>
                         <a href="#" onclick="switchTab('settings')" id="tab-settings"
-                            class="flex items-center px-6 py-3 t-text-muted hover:t-bg-main transition-colors duration-200">
-                            <i class="fas fa-cog w-6 text-center"></i>
+                            class="flex items-center px-6 py-4 t-text-muted hover:t-bg-main transition-colors duration-200 min-h-[48px]">
+                            <i class="fas fa-cog w-6 text-center text-lg"></i>
                             <span class="ml-3 font-medium">设置</span>
                         </a>
                     </li>
                     <li>
                         <a href="#" onclick="switchTab('about')" id="tab-about"
-                            class="flex items-center px-6 py-3 t-text-muted hover:t-bg-main transition-colors duration-200">
-                            <i class="fas fa-info-circle w-6 text-center"></i>
+                            class="flex items-center px-6 py-4 t-text-muted hover:t-bg-main transition-colors duration-200 min-h-[48px]">
+                            <i class="fas fa-info-circle w-6 text-center text-lg"></i>
                             <span class="ml-3 font-medium">关于</span>
                         </a>
                     </li>
@@ -4093,38 +4140,38 @@
             </div>
             <!-- Action Buttons (Mobile Compact) -->
             <div
-                class="flex flex-wrap items-center justify-end max-[440px]:justify-center gap-1.5 ml-auto flex-shrink-0 max-[440px]:max-w-[80px] max-w-[200px] md:max-w-none">
+                class="flex flex-wrap items-center justify-end max-[440px]:justify-center gap-2 ml-auto flex-shrink-0 max-[440px]:max-w-[100px] max-w-[200px] md:max-w-none">
                 <!-- Like button -->
-                <button id="player-like-btn" class="text-gray-300 hover:text-red-500 transition-colors">
+                <button id="player-like-btn" class="text-gray-300 hover:text-red-500 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center">
                     <i class="fas fa-heart text-base md:text-lg"></i>
                 </button>
                 <!-- Download Button (Mobile) -->
                 <button
-                    class="md:hidden text-gray-500 hover:text-emerald-600 text-[10px] font-bold border border-gray-300 rounded px-1 py-0"
+                    class="md:hidden text-gray-500 hover:text-emerald-600 text-xs font-bold border border-gray-300 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center"
                     onclick="handleDownloadClick(event)" title="下载/缓存">
-                    <i class="fas fa-download text-[10px]"></i>
+                    <i class="fas fa-download text-xs"></i>
                 </button>
                 <!-- Sound Effects Button (Mobile) -->
                 <button
-                    class="md:hidden text-gray-500 hover:text-emerald-600 text-[10px] font-bold border border-gray-300 rounded px-1 py-0"
+                    class="md:hidden text-gray-500 hover:text-emerald-600 text-xs font-bold border border-gray-300 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center"
                     onclick="window.soundEffects && window.soundEffects.toggle()" title="均衡器 & 音效">
-                    <i class="fas fa-sliders-h text-[10px]"></i>
+                    <i class="fas fa-sliders-h text-xs"></i>
                 </button>
                 <!-- Comment button (Mobile) -->
                 <button
-                    class="md:hidden text-gray-500 hover:text-emerald-600 text-[10px] font-bold border border-gray-300 rounded px-1 py-0"
+                    class="md:hidden text-gray-500 hover:text-emerald-600 text-xs font-bold border border-gray-300 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center"
                     onclick="toggleCommentModal()">评</button>
                 <!-- Share Card button (Mobile) -->
                 <button
-                    class="md:hidden text-gray-500 hover:text-emerald-600 text-[10px] font-bold border border-gray-300 rounded px-1 py-0"
+                    class="md:hidden text-gray-500 hover:text-emerald-600 text-xs font-bold border border-gray-300 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center"
                     onclick="window.lyricCard && window.lyricCard.open()" title="分享歌词卡片">
-                    <i class="fas fa-image text-[10px]"></i>
+                    <i class="fas fa-image text-xs"></i>
                 </button>
                 <!-- Queue Button (Mobile) -->
                 <button
-                    class="md:hidden text-gray-500 hover:text-emerald-600 text-[10px] font-bold border border-gray-300 rounded px-1 py-0"
+                    class="md:hidden text-gray-500 hover:text-emerald-600 text-xs font-bold border border-gray-300 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center"
                     onclick="toggleQueueDrawer()" title="播放队列">
-                    <i class="fas fa-list text-[10px]"></i>
+                    <i class="fas fa-list text-xs"></i>
                 </button>
             </div>
         </div>
@@ -4160,7 +4207,7 @@
                 <!-- Play Mode Button with Dropdown -->
                 <div class="relative group">
                     <button id="play-mode-btn" onclick="togglePlayModeMenu(event)"
-                        class="t-text-muted hover:text-emerald-500 transition-colors p-2" title="播放模式">
+                        class="t-text-muted hover:text-emerald-500 transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" title="播放模式">
                         <i class="fas fa-redo"></i>
                     </button>
                     <!-- Dropdown Menu -->
@@ -4194,20 +4241,20 @@
                     </div>
                 </div>
 
-                <button class="t-text-muted hover:text-emerald-600 text-lg transition-colors p-2"
+                <button class="t-text-muted hover:text-emerald-600 text-lg transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
                     onclick="playPrev()"><i class="fas fa-step-backward"></i></button>
                 <button id="btn-play"
-                    class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200 hover:bg-emerald-600 hover:scale-105 transition-all flex items-center justify-center"
+                    class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200 hover:bg-emerald-600 hover:scale-105 transition-all flex items-center justify-center"
                     onclick="togglePlay()">
-                    <i class="fas fa-play ml-1 text-lg"></i>
+                    <i class="fas fa-play ml-1 text-xl md:text-2xl"></i>
                 </button>
-                <button class="t-text-muted hover:text-emerald-600 text-lg transition-colors p-2"
+                <button class="t-text-muted hover:text-emerald-600 text-lg transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
                     onclick="playNext()"><i class="fas fa-step-forward"></i></button>
 
                 <!-- Playback Rate Button -->
                 <div class="relative group">
                     <button id="playback-rate-btn" onclick="togglePlaybackRateMenu(event)"
-                        class="t-text-muted hover:text-emerald-500 transition-colors p-2 text-[10px] md:text-sm font-black w-10 md:w-12"
+                        class="t-text-muted hover:text-emerald-500 transition-colors p-2 text-[10px] md:text-sm font-black min-w-[44px] min-h-[44px] flex items-center justify-center"
                         title="播放速度">
                         1.0x
                     </button>
@@ -4303,8 +4350,8 @@
 
     <!-- External Song List Modal -->
     <div id="external-list-modal"
-        class="fixed inset-0 bg-black/40 z-[70] hidden items-center justify-center backdrop-blur-sm transition-opacity duration-300">
-        <div class="t-bg-panel rounded-2xl w-full max-w-lg flex flex-col shadow-2xl transform transition-all duration-300 scale-95 opacity-0 overflow-hidden"
+        class="fixed inset-0 bg-black/40 z-[70] hidden items-center justify-center backdrop-blur-sm transition-opacity duration-300 p-2 md:p-4">
+        <div class="t-bg-panel rounded-2xl w-full max-w-sm md:max-w-lg flex flex-col shadow-2xl transform transition-all duration-300 scale-95 opacity-0 overflow-hidden"
             id="external-list-modal-content">
             <!-- Header -->
             <div class="p-6 border-b t-border-main flex justify-between items-center t-bg-main">
@@ -4370,7 +4417,7 @@
 
     <!-- QQ ID Input Modal -->
     <div id="qq-input-modal"
-        class="fixed inset-0 bg-black/40 z-[80] hidden items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+        class="fixed inset-0 bg-black/40 z-[80] hidden items-center justify-center backdrop-blur-sm transition-opacity duration-300 p-2 md:p-4">
         <div class="t-bg-panel rounded-2xl w-full max-w-sm flex flex-col shadow-2xl transform transition-all duration-300 scale-95 opacity-0 overflow-hidden"
             id="qq-input-modal-content">
             <div class="p-6 border-b t-border-main flex justify-between items-center t-bg-main">
@@ -4393,8 +4440,8 @@
 
     <!-- User Playlist Selection Modal -->
     <div id="user-playlist-modal"
-        class="fixed inset-0 bg-black/40 z-[90] hidden items-center justify-center backdrop-blur-sm transition-opacity duration-300">
-        <div class="t-bg-panel rounded-2xl w-full max-w-lg flex flex-col shadow-2xl transform transition-all duration-300 scale-95 opacity-0 overflow-hidden max-h-[80vh]"
+        class="fixed inset-0 bg-black/40 z-[90] hidden items-center justify-center backdrop-blur-sm transition-opacity duration-300 p-2 md:p-4">
+        <div class="t-bg-panel rounded-2xl w-full max-w-sm md:max-w-lg flex flex-col shadow-2xl transform transition-all duration-300 scale-95 opacity-0 overflow-hidden max-h-[85vh]"
             id="user-playlist-modal-content">
             <div class="p-6 border-b t-border-main flex justify-between items-center t-bg-main">
                 <div class="flex items-center gap-4">
@@ -4417,9 +4464,9 @@
     </div>
 
     <!-- Sync Auth Modal -->
-    <div id="sync-auth-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-[70]">
-        <div class="t-bg-panel rounded-lg shadow-xl w-96 p-6 relative">
-            <button onclick="closeSyncModal()" class="absolute top-2 right-2 t-text-muted hover:t-text-muted">
+    <div id="sync-auth-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[70] p-2 md:p-4">
+        <div class="t-bg-panel rounded-xl shadow-xl w-full max-w-sm md:w-96 p-4 md:p-6 relative">
+            <button onclick="closeSyncModal()" class="absolute top-2 right-2 t-text-muted hover:t-text-muted p-2 hover:bg-gray-100 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center">
                 <i class="fas fa-times"></i>
             </button>
             <h3 class="text-lg font-bold mb-4 flex items-center">
@@ -4489,8 +4536,8 @@
 
     <!-- Custom Source Modal -->
     <div id="custom-source-modal"
-        class="fixed inset-0 bg-black bg-opacity-50 z-[70] hidden flex items-center justify-center backdrop-blur-sm transition-opacity duration-300">
-        <div class="t-bg-panel rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl transform transition-transform duration-300 scale-95 opacity-0 overflow-hidden"
+        class="fixed inset-0 bg-black/50 z-[70] hidden flex items-center justify-center backdrop-blur-sm transition-opacity duration-300 p-2 md:p-4">
+        <div class="t-bg-panel rounded-2xl w-full max-w-md md:max-w-2xl max-h-[85vh] flex flex-col shadow-2xl transform transition-transform duration-300 scale-95 opacity-0 overflow-hidden"
             id="custom-source-modal-content">
             <!-- Header -->
             <div class="p-6 border-b t-border-main flex justify-between items-center t-bg-main rounded-t-2xl">
@@ -4527,8 +4574,8 @@
 
     <!-- Playlist Add Modal (添加到歌单) -->
     <div id="playlist-add-modal"
-        class="fixed inset-0 bg-black/60 z-[70] hidden flex items-center justify-center backdrop-blur-sm transition-opacity duration-300">
-        <div class="t-bg-panel rounded-xl w-full max-w-2xl flex flex-col shadow-2xl transform transition-transform duration-300 scale-95 opacity-0 overflow-hidden"
+        class="fixed inset-0 bg-black/60 z-[70] hidden flex items-center justify-center backdrop-blur-sm transition-opacity duration-300 p-2 md:p-4">
+        <div class="t-bg-panel rounded-xl w-full max-w-md md:max-w-2xl flex flex-col shadow-2xl transform transition-transform duration-300 scale-95 opacity-0 overflow-hidden"
             id="playlist-add-modal-content">
             <!-- Header -->
             <div class="p-4 border-b border-emerald-50 flex justify-between items-center bg-emerald-50/30">
@@ -4555,8 +4602,8 @@
 
     <!-- SubPath Selection Modal -->
     <div id="subpath-select-modal"
-        class="fixed inset-0 bg-black/60 z-[70] hidden flex items-center justify-center backdrop-blur-sm transition-opacity duration-300">
-        <div class="t-bg-panel rounded-xl w-full max-w-2xl flex flex-col shadow-2xl transform transition-transform duration-300 scale-95 opacity-0 overflow-hidden"
+        class="fixed inset-0 bg-black/60 z-[70] hidden flex items-center justify-center backdrop-blur-sm transition-opacity duration-300 p-2 md:p-4">
+        <div class="t-bg-panel rounded-xl w-full max-w-md md:max-w-2xl flex flex-col shadow-2xl transform transition-transform duration-300 scale-95 opacity-0 overflow-hidden"
             id="subpath-select-modal-content">
             <!-- Header -->
             <div class="p-4 border-b border-emerald-50 flex justify-between items-center bg-emerald-50/30">
@@ -4590,7 +4637,7 @@
 
     <!-- Sleep Timer Modal -->
     <div id="sleep-timer-modal"
-        class="fixed inset-0 bg-black/40 z-[70] hidden items-center justify-center transition-opacity duration-300">
+        class="fixed inset-0 bg-black/40 z-[70] hidden items-center justify-center transition-opacity duration-300 p-2 md:p-4">
         <div class="t-bg-panel rounded-3xl w-full max-w-sm flex flex-col shadow-2xl border t-border-main transform transition-all duration-300 scale-95 opacity-0"
             id="sleep-timer-modal-content">
             <div class="p-6">
@@ -4898,10 +4945,10 @@
 
     <!-- Comment Modal (Glassmorphism) -->
     <div id="comment-modal"
-        class="fixed inset-0 z-[70] hidden items-center justify-center p-4 md:p-6 transition-all duration-300">
+        class="fixed inset-0 z-[70] hidden items-center justify-center p-2 md:p-6 transition-all duration-300">
         <div class="absolute inset-0 bg-black/20 backdrop-blur-sm" onclick="toggleCommentModal()"></div>
         <div id="comment-modal-content"
-            class="relative w-full max-w-2xl h-[85vh] md:h-[80vh] t-bg-panel rounded-3xl shadow-2xl border t-border-main flex flex-col overflow-hidden transform translate-y-10 opacity-0 transition-all duration-500">
+            class="relative w-full max-w-md md:max-w-2xl h-[90vh] md:h-[80vh] t-bg-panel rounded-3xl shadow-2xl border t-border-main flex flex-col overflow-hidden transform translate-y-10 opacity-0 transition-all duration-500">
             <!-- Header -->
             <div class="p-4 md:p-6 border-b t-border-main/50 flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -5181,10 +5228,10 @@
 
     <!-- Sound Effects Modal -->
     <div id="sound-effects-modal"
-        class="fixed inset-0 z-[70] hidden items-center justify-center p-4 md:p-6 transition-all duration-300">
+        class="fixed inset-0 z-[70] hidden items-center justify-center p-2 md:p-6 transition-all duration-300">
         <div class="absolute inset-0 bg-black/40" onclick="window.soundEffects && window.soundEffects.close()"></div>
         <div id="sound-effects-content"
-            class="relative w-full max-w-5xl max-h-[90vh] md:max-h-[85vh] t-bg-panel rounded-xl shadow-2xl border t-border-main flex flex-col overflow-hidden transform translate-y-10 opacity-0 transition-all duration-500">
+            class="relative w-full max-w-md md:max-w-5xl max-h-[90vh] md:max-h-[85vh] t-bg-panel rounded-xl shadow-2xl border t-border-main flex flex-col overflow-hidden transform translate-y-10 opacity-0 transition-all duration-500">
 
             <!-- Header -->
             <div class="p-4 border-b t-border-main flex items-center justify-between t-bg-panel">
@@ -5661,6 +5708,12 @@
     <script src="js/local_music.js"></script>
     <script src="js/common_ui.js"></script>
     <script src="app.js"></script>
+    <script>
+        // Initialize sidebar state on page load
+        if (typeof initSidebarState === 'function') {
+            initSidebarState();
+        }
+    </script>
 </body>
 
 </html>
