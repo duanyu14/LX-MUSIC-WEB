@@ -26,7 +26,7 @@ const config: LX.Config = {
     // },
   ],
 
-  'frontend.password': '123456',
+  'frontend.password': '20060606',
 
   // WebDAV 配置
   'webdav.url': '',
@@ -36,7 +36,7 @@ const config: LX.Config = {
 
   // Web播放器配置
   'player.enableAuth': false,
-  'player.password': '123456',
+  'player.password': '20060606',
 
   // 代理配置
   'proxy.all.enabled': false,

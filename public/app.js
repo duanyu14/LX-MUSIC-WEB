@@ -234,8 +234,22 @@ class App {
             if (res.success) {
                 this.password = password;
                 localStorage.setItem('lx_auth', password);
+                
+                // 如果是超级管理员登录，额外保存标志
+                if (res.superAdmin) {
+                    localStorage.setItem('lx_super_admin', 'true');
+                    console.log('[Admin] Super admin logged in - player session issued');
+                }
+                
                 this.showApp();
                 this.loadDashboard();
+                
+                // 显示登录成功提示
+                if (res.superAdmin) {
+                    showSuccess('超级管理员登录成功（已同步 music 页面登录状态）');
+                } else {
+                    showSuccess('登录成功');
+                }
             } else {
                 errorEl.textContent = '密码错误';
                 console.log('[Admin] Login failed - wrong password');
@@ -248,6 +262,7 @@ class App {
 
     logout() {
         localStorage.removeItem('lx_auth');
+        localStorage.removeItem('lx_super_admin');
         location.reload();
     }
 

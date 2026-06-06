@@ -20,13 +20,13 @@ module.exports = {
       "dataPath": "D:\\Documents\\Project\\lxmusic\\data\\users\\admin_21232f"
     }
   ],
-  "frontend.password": "123456",
+  "frontend.password": "20060606",
   "webdav.url": "",
   "webdav.username": "",
   "webdav.password": "",
   "sync.interval": 60,
   "player.enableAuth": false,
-  "player.password": "123456",
+  "player.password": "20060606",
   "proxy.all.enabled": false,
   "proxy.all.address": "",
   "admin.path": "",
