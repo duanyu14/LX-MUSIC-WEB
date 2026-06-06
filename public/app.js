@@ -360,10 +360,203 @@ class App {
     }
 
     checkForUpdates() {
-        if (window.LxNotification && window.LxNotification.checkUpdates) {
-            window.LxNotification.checkUpdates(true);
+        this.showAdminChangelog();
+    }
+
+    async showAdminChangelog() {
+        // 检查是否已存在更新日志模态框
+        if (document.getElementById('admin-changelog-modal')) {
+            document.getElementById('admin-changelog-modal').remove();
+        }
+
+        // 创建更新日志模态框
+        const modal = document.createElement('div');
+        modal.id = 'admin-changelog-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content glass" style="max-width: 900px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-book" style="color: #10b981;"></i>
+                        更新日志
+                    </h3>
+                    <button class="modal-close" onclick="app.closeAdminChangelog()">&times;</button>
+                </div>
+                <div style="padding: 15px; background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--glass-border);">
+                    <label style="font-size: 12px; color: var(--text-secondary); margin-right: 10px;">选择版本:</label>
+                    <select id="admin-changelog-version" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--glass-border); background: var(--bg-primary); color: var(--text-primary);">
+                        <option value="">加载中...</option>
+                    </select>
+                    <span id="admin-changelog-date" style="font-size: 12px; color: var(--text-secondary); margin-left: 10px;"></span>
+                </div>
+                <div id="admin-changelog-content" class="modal-body" style="flex: 1; overflow-y: auto; padding: 20px;"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.classList.remove('hidden');
+
+        try {
+            const response = await fetch('/api/changelog');
+            if (!response.ok) throw new Error('获取更新日志失败');
+            
+            const content = await response.text();
+            console.log('[Changelog] Content length:', content.length);
+            
+            const versions = this.parseChangelogVersions(content);
+            console.log('[Changelog] Parsed versions:', versions);
+            
+            const select = document.getElementById('admin-changelog-version');
+            const dateSpan = document.getElementById('admin-changelog-date');
+            select.innerHTML = '';
+            
+            if (versions.length === 0) {
+                document.getElementById('admin-changelog-content').innerHTML = 
+                    `<p style="color: var(--accent-error); text-align: center;">解析版本失败，请检查更新日志格式</p>`;
+                return;
+            }
+            
+            versions.forEach((v, index) => {
+                const option = document.createElement('option');
+                option.value = v.version;
+                option.textContent = `v${v.version}`;
+                if (index === 0) {
+                    option.selected = true;
+                    dateSpan.textContent = v.date;
+                }
+                select.appendChild(option);
+            });
+            
+            // 默认显示最新版本
+            const latestVersion = versions[0];
+            console.log('[Changelog] Displaying version:', latestVersion.version);
+            this.displayChangelogContent(content, latestVersion.version);
+            
+            // 添加版本切换事件
+            select.addEventListener('change', () => {
+                const selectedVersion = select.value;
+                console.log('[Changelog] Version changed to:', selectedVersion);
+                const selected = versions.find(v => v.version === selectedVersion);
+                if (selected) {
+                    dateSpan.textContent = selected.date;
+                    this.displayChangelogContent(content, selectedVersion);
+                }
+            });
+        } catch (e) {
+            console.error('[Changelog] Error:', e);
+            document.getElementById('admin-changelog-content').innerHTML = 
+                `<p style="color: var(--accent-error); text-align: center;">加载更新日志失败: ${e.message}</p>`;
+        }
+    }
+
+    closeAdminChangelog() {
+        const modal = document.getElementById('admin-changelog-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    parseChangelogVersions(content) {
+        const versions = [];
+        // 匹配 ## 开头到版本号的格式，如 ## 🎉 v1.9.5.2 (2026-06-05)
+        const lines = content.split('\n');
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            // 匹配 ## 开头，包含版本号和日期的格式
+            const match = trimmedLine.match(/^##\s+.+\s+v([\d.]+)\s+\(([^)]+)\)/);
+            if (match && match[1]) {
+                versions.push({
+                    version: match[1],
+                    date: match[2]
+                });
+            }
+        }
+        console.log('[Changelog] parseChangelogVersions result:', versions);
+        return versions;
+    }
+
+    displayChangelogContent(content, version) {
+        console.log('[Changelog] displayChangelogContent called with version:', version);
+        
+        const container = document.getElementById('admin-changelog-content');
+        if (!container) return;
+
+        // 查找指定版本的内容
+        const lines = content.split('\n');
+        let startIndex = -1;
+        let endIndex = lines.length;
+        
+        // 找到版本的起始行
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.match(new RegExp(`^##\\s+.+\\s+v${version}\\s+\\(`))) {
+                startIndex = i;
+                break;
+            }
+        }
+        
+        // 找到下一个版本的起始行
+        if (startIndex >= 0) {
+            for (let i = startIndex + 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.match(/^##\s+/)) {
+                    endIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        console.log('[Changelog] Found version content from line', startIndex, 'to', endIndex);
+        
+        if (startIndex >= 0) {
+            // 提取版本内容
+            let html = lines.slice(startIndex + 1, endIndex).join('\n').trim();
+            
+            // 转换 Markdown 格式为 HTML
+            // 处理标题
+            html = html.replace(/^### (.*)$/gm, '<h4 style="margin-top: 16px; margin-bottom: 8px; font-size: 16px; font-weight: bold; color: var(--text-primary);">$1</h4>');
+            html = html.replace(/^#### (.*)$/gm, '<h5 style="margin-top: 12px; margin-bottom: 6px; font-size: 14px; font-weight: bold; color: var(--text-primary);">$1</h5>');
+            
+            // 处理分隔线
+            html = html.replace(/^---$/gm, '<hr style="border: none; border-top: 1px solid var(--glass-border); margin: 16px 0;">');
+            
+            // 处理粗体
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong style="color: var(--text-primary);">$1</strong>');
+            
+            // 处理行内代码
+            html = html.replace(/`([^`]+)`/g, '<code style="background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px;">$1</code>');
+            
+            // 处理列表
+            html = html.replace(/^- (.*)$/gm, '<li style="margin-left: 20px; margin-bottom: 6px; color: var(--text-secondary);">$1</li>');
+            html = html.replace(/(<li[^>]*>.*<\/li>\n?)+/g, '<ul style="margin-bottom: 12px; padding-left: 0; list-style-type: disc;">$&</ul>');
+            
+            // 处理表格
+            html = html.replace(/\|(.+)\|\n\|[-| ]+\|\n((?:\|.+\|\n?)+)/g, (_, header, body) => {
+                let table = '<table style="width: 100%; border-collapse: collapse; margin: 12px 0;">';
+                const headers = header.split('|').filter(h => h.trim()).map(h => `<th style="border: 1px solid var(--glass-border); padding: 10px; text-align: left; font-weight: bold; background: rgba(0,0,0,0.1);">${h.trim()}</th>`).join('');
+                table += `<tr>${headers}</tr>`;
+                
+                const rows = body.trim().split('\n');
+                rows.forEach(row => {
+                    const cells = row.split('|').filter(c => c.trim()).map(c => `<td style="border: 1px solid var(--glass-border); padding: 10px; color: var(--text-secondary);">${c.trim()}</td>`).join('');
+                    table += `<tr>${cells}</tr>`;
+                });
+                
+                table += '</table>';
+                return table;
+            });
+            
+            // 处理段落
+            html = html.replace(/\n\n+/g, '</p><p style="margin: 8px 0; color: var(--text-secondary); line-height: 1.6;">');
+            
+            if (!html.startsWith('<')) {
+                html = `<p style="margin: 8px 0; color: var(--text-secondary); line-height: 1.6;">${html}</p>`;
+            }
+            
+            console.log('[Changelog] HTML generated successfully');
+            container.innerHTML = html;
         } else {
-            showInfo('通知服务未就绪，请稍后重试');
+            console.log('[Changelog] No match found for version:', version);
+            container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 40px;">未找到版本 ${version} 的更新日志</p>`;
         }
     }
 

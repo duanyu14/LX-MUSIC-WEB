@@ -55,14 +55,14 @@ async function showChangelog() {
     modal.id = 'changelog-modal';
     modal.className = 'fixed inset-0 flex items-center justify-center p-2 md:p-4 z-[10000]';
     modal.innerHTML = `
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeChangelogModal(event)"></div>
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="changelog-backdrop" onclick="closeChangelogModal()"></div>
         <div class="relative t-bg-panel rounded-2xl shadow-2xl w-full max-w-md md:max-w-4xl max-h-[90vh] md:max-h-[85vh] overflow-hidden flex flex-col">
             <div class="flex items-center justify-between p-4 md:p-6 border-b t-border-main">
                 <h2 class="text-lg md:text-xl font-bold t-text-main flex items-center gap-2">
                     <i class="fas fa-book text-emerald-500"></i>
                     更新日志
                 </h2>
-                <button onclick="closeChangelogModal(event)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <button onclick="closeChangelogModal()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
                     <i class="fas fa-times t-text-muted text-lg"></i>
                 </button>
             </div>
@@ -159,13 +159,10 @@ function displayVersionContent(content, version) {
     }
 }
 
-function closeChangelogModal(event) {
-    // 如果点击的是模态框背景或关闭按钮，才关闭
-    if (!event || event.target.id === 'changelog-modal' || event.target.tagName === 'BUTTON') {
-        const modal = document.getElementById('changelog-modal');
-        if (modal) {
-            modal.remove();
-        }
+function closeChangelogModal() {
+    const modal = document.getElementById('changelog-modal');
+    if (modal) {
+        modal.remove();
     }
 }
 
