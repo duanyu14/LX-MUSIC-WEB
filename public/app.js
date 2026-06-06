@@ -212,19 +212,24 @@ class App {
     }
 
     async login() {
+        console.log('[Admin] login function called');
         const password = document.getElementById('access-password').value;
         const errorEl = document.getElementById('login-error');
+        console.log('[Admin] Password input value length:', password ? password.length : 0);
 
         if (!password) {
             errorEl.textContent = '请输入密码';
+            console.log('[Admin] No password entered');
             return;
         }
 
         try {
+            console.log('[Admin] Sending login request to /api/login');
             const res = await this.request('/api/login', {
                 method: 'POST',
                 body: JSON.stringify({ password })
             });
+            console.log('[Admin] Login response:', res);
 
             if (res.success) {
                 this.password = password;
@@ -233,8 +238,10 @@ class App {
                 this.loadDashboard();
             } else {
                 errorEl.textContent = '密码错误';
+                console.log('[Admin] Login failed - wrong password');
             }
         } catch (err) {
+            console.error('[Admin] Login error:', err);
             errorEl.textContent = '登录失败，请重试';
         }
     }
