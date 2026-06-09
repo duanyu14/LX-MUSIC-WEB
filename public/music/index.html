@@ -1014,6 +1014,15 @@
         }
 
 
+        /* 设备角色选择按钮样式 */
+        .active-role {
+            border-color: rgb(16 185 129) !important;
+            background-color: rgba(16, 185, 129, 0.1) !important;
+        }
+        #btn-role-controller:hover, #btn-role-player:hover, #btn-role-both:hover {
+            transform: scale(1.02);
+        }
+
     </style>
 </head>
 
@@ -5522,6 +5531,39 @@
                         class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98]">
                         连接远程服务器
                     </button>
+                    
+                    <!-- 设备角色选择 (播放控制同步) -->
+                    <div id="player-role-selection" class="hidden mt-4 p-4 bg-gradient-to-r from-emerald-500/10 to-blue-500/10 rounded-2xl border border-emerald-500/20">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="fas fa-broadcast-tower text-emerald-500"></i>
+                            <span class="text-sm font-bold t-text-main">播放控制同步</span>
+                        </div>
+                        <p class="text-xs t-text-muted mb-3">选择此设备的角色，实现手机控制电脑播放</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setPlayerRole('controller')"
+                                id="btn-role-controller"
+                                class="p-3 border t-border-main rounded-xl hover:t-bg-item-hover transition-all text-center group">
+                                <i class="fas fa-mobile-alt text-lg mb-1 text-blue-500"></i>
+                                <div class="text-[10px] font-bold t-text-main">控制器</div>
+                                <div class="text-[9px] t-text-muted">手机端</div>
+                            </button>
+                            <button onclick="setPlayerRole('player')"
+                                id="btn-role-player"
+                                class="p-3 border t-border-main rounded-xl hover:t-bg-item-hover transition-all text-center group">
+                                <i class="fas fa-desktop text-lg mb-1 text-emerald-500"></i>
+                                <div class="text-[10px] font-bold t-text-main">播放器</div>
+                                <div class="text-[9px] t-text-muted">电脑端</div>
+                            </button>
+                            <button onclick="setPlayerRole('both')"
+                                id="btn-role-both"
+                                class="p-3 border t-border-main rounded-xl hover:t-bg-item-hover transition-all text-center group active-role">
+                                <i class="fas fa-sync-alt text-lg mb-1 text-purple-500"></i>
+                                <div class="text-[10px] font-bold t-text-main">双向</div>
+                                <div class="text-[9px] t-text-muted">默认</div>
+                            </button>
+                        </div>
+                        <div id="player-role-status" class="mt-2 text-xs text-center t-text-muted"></div>
+                    </div>
                 </div>
                 <div id="remote-overwrite-mode-selection" class="hidden space-y-3">
                     <p class="text-xs t-text-muted mb-1 text-center font-medium">连接成功！请选择同步方向：</p>

@@ -8155,6 +8155,13 @@ async function handleRemoteOverwriteConnect(silent = false) {
             if (!silent && statusEl) {
                 statusEl.innerHTML = '<i class="fas fa-check-circle text-emerald-500"></i> 已连通，等待同步指令...';
             }
+            
+            // 初始化播放控制同步
+            setTimeout(() => {
+                initPlayerSync();
+                // 显示设备角色选择 UI
+                window.showPlayerRoleSelection();
+            }, 1000);
         } else {
             if (!silent && statusEl) {
                 statusEl.classList.remove('t-text-muted');
@@ -12357,5 +12364,254 @@ document.addEventListener('click', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     window.CustomSelectManager.initAll();
 });
+
+// ============================================
+// 播放控制同步 (Player Control Sync)
+// ============================================
+
+// 获取当前播放器状态
+window.getPlayerState = function() {
+    const audio = document.getElementById('audio-player');
+    return {
+        isPlaying: !audio.paused,
+        currentTime: audio.currentTime || 0,
+        duration: audio.duration || 0,
+        volume: audio.volume || 1,
+        currentIndex: currentIndex,
+        currentSong: currentPlayingSong,
+        playlistLength: currentPlaylist.length,
+        playMode: playMode,
+        playbackRate: audio.playbackRate || 1
+    };
+};
+
+// 处理播放控制指令
+function handlePlayerControlCommand(type, data) {
+    console.log('[PlayerControl] 收到控制指令:', type, data);
+    
+    const audio = document.getElementById('audio-player');
+    
+    switch (type) {
+        case 'player:play':
+            if (audio.paused) {
+                audio.play().catch(e => console.error('[PlayerControl] 播放失败:', e));
+            }
+            break;
+            
+        case 'player:pause':
+            if (!audio.paused) {
+                audio.pause();
+            }
+            break;
+            
+        case 'player:stop':
+            audio.pause();
+            audio.currentTime = 0;
+            break;
+            
+        case 'player:next':
+            playNext();
+            break;
+            
+        case 'player:prev':
+            playPrev();
+            break;
+            
+        case 'player:seek':
+            if (data.time !== undefined) {
+                audio.currentTime = data.time;
+            }
+            break;
+            
+        case 'player:set_volume':
+            if (data.volume !== undefined) {
+                audio.volume = Math.max(0, Math.min(1, data.volume));
+                // 更新音量 UI
+                const volumeSlider = document.getElementById('volume-slider');
+                if (volumeSlider) {
+                    volumeSlider.value = audio.volume * 100;
+                }
+            }
+            break;
+            
+        case 'player:play_song':
+            if (data.song) {
+                // 播放指定歌曲
+                if (data.index !== undefined && data.index >= 0 && data.index < currentPlaylist.length) {
+                    currentIndex = data.index;
+                    playSongAtIndex(currentIndex);
+                } else if (data.song.id) {
+                    // 根据 ID 查找歌曲
+                    const idx = currentPlaylist.findIndex(s => s.id === data.song.id);
+                    if (idx >= 0) {
+                        currentIndex = idx;
+                        playSongAtIndex(currentIndex);
+                    }
+                }
+            }
+            break;
+            
+        case 'player:add_to_queue':
+            if (data.songs && Array.isArray(data.songs)) {
+                currentPlaylist.push(...data.songs);
+                renderQueue();
+                showSuccess(`已添加 ${data.songs.length} 首歌曲到队列`);
+            }
+            break;
+            
+        case 'player:clear_queue':
+            currentPlaylist = [];
+            currentIndex = -1;
+            audio.pause();
+            audio.src = '';
+            renderQueue();
+            updatePlayerUI();
+            showSuccess('队列已清空');
+            break;
+            
+        case 'player:remove_from_queue':
+            if (data.index !== undefined && data.index >= 0 && data.index < currentPlaylist.length) {
+                currentPlaylist.splice(data.index, 1);
+                if (currentIndex === data.index) {
+                    // 如果移除的是当前播放的歌曲，播放下一首
+                    playNext();
+                } else if (currentIndex > data.index) {
+                    currentIndex--;
+                }
+                renderQueue();
+            }
+            break;
+            
+        case 'player:set_queue':
+            if (data.songs && Array.isArray(data.songs)) {
+                currentPlaylist = [...data.songs];
+                currentIndex = -1;
+                renderQueue();
+                showSuccess(`队列已更新，共 ${data.songs.length} 首歌曲`);
+            }
+            break;
+            
+        default:
+            console.warn('[PlayerControl] 未知指令:', type);
+    }
+}
+
+// 初始化播放控制同步
+function initPlayerSync() {
+    // 检查是否已连接远程同步
+    if (!window.SyncManager || !window.SyncManager.client || !window.SyncManager.client.isConnected) {
+        console.log('[PlayerSync] 未连接远程同步，跳过初始化');
+        return;
+    }
+    
+    // 创建播放控制同步实例
+    if (!window.playerSync) {
+        window.playerSync = new window.PlayerSyncClient(window.SyncManager.client);
+        
+        // 设置控制指令回调
+        window.playerSync.onControlCommand = handlePlayerControlCommand;
+        
+        // 设置状态同步回调（控制器端接收）
+        window.playerSync.onStateSync = function(state) {
+            // 更新远程状态显示
+            updateRemotePlayerState(state);
+        };
+        
+        console.log('[PlayerSync] 播放控制同步已初始化');
+    }
+}
+
+// 更新远程播放器状态显示（控制器端）
+function updateRemotePlayerState(state) {
+    console.log('[PlayerSync] 远程状态更新:', state);
+    
+    // 存储远程状态
+    window.remotePlayerState = state;
+    
+    // 如果当前是控制器模式，更新 UI 显示远程状态
+    if (window.playerSync && window.playerSync.role === 'controller') {
+        // 更新远程播放器状态 UI
+        const remoteStateEl = document.getElementById('remote-player-state');
+        if (remoteStateEl) {
+            const songName = state.currentSong ? (state.currentSong.name || '未知') : '未播放';
+            const progress = state.duration > 0 ? Math.round(state.currentTime / state.duration * 100) : 0;
+            
+            remoteStateEl.innerHTML = `
+                <div class="flex items-center gap-2 p-2 bg-emerald-500/10 rounded-lg">
+                    <i class="fas fa-broadcast-tower text-emerald-500"></i>
+                    <span class="text-sm">远程播放: ${songName}</span>
+                    <span class="text-xs text-gray-500">${Math.round(state.currentTime)}s / ${Math.round(state.duration)}s</span>
+                </div>
+            `;
+        }
+    }
+}
+
+// 监听远程同步连接状态
+document.addEventListener('DOMContentLoaded', () => {
+    // 定期检查并初始化播放控制同步
+    setInterval(() => {
+        if (window.SyncManager && window.SyncManager.client && window.SyncManager.client.isConnected) {
+            if (!window.playerSync) {
+                initPlayerSync();
+            }
+        }
+    }, 5000);
+});
+
+// 暴露全局函数
+window.initPlayerSync = initPlayerSync;
+window.handlePlayerControlCommand = handlePlayerControlCommand;
+
+// 设置设备角色
+window.setPlayerRole = async function(role) {
+    console.log('[PlayerSync] 设置设备角色:', role);
+    
+    if (!window.playerSync) {
+        // 尝试初始化
+        initPlayerSync();
+        if (!window.playerSync) {
+            showError('请先连接远程服务器');
+            return;
+        }
+    }
+    
+    // 设置角色
+    await window.playerSync.setRole(role);
+    
+    // 更新 UI
+    const buttons = ['controller', 'player', 'both'];
+    buttons.forEach(r => {
+        const btn = document.getElementById(`btn-role-${r}`);
+        if (btn) {
+            if (r === role) {
+                btn.classList.add('active-role', 'border-emerald-500', 'bg-emerald-500/10');
+            } else {
+                btn.classList.remove('active-role', 'border-emerald-500', 'bg-emerald-500/10');
+            }
+        }
+    });
+    
+    // 更新状态显示
+    const statusEl = document.getElementById('player-role-status');
+    if (statusEl) {
+        const roleNames = {
+            'controller': '控制器 (手机端)',
+            'player': '播放器 (电脑端)',
+            'both': '双向同步'
+        };
+        statusEl.textContent = `当前角色: ${roleNames[role]}`;
+    }
+    
+    showSuccess(`设备角色已设置为: ${role}`);
+};
+
+// 显示设备角色选择 UI
+window.showPlayerRoleSelection = function() {
+    const roleSelection = document.getElementById('player-role-selection');
+    if (roleSelection) {
+        roleSelection.classList.remove('hidden');
+    }
+};
 
 

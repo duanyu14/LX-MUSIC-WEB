@@ -648,6 +648,18 @@ class RemoteClient {
                 } else {
                     console.warn('[RPC] 未知操作:', action);
                 }
+            },
+
+            // --- 播放控制同步 ---
+            onPlayerSyncAction: async (msgData) => {
+                console.log('[RPC] onPlayerSyncAction, 播放控制消息:', msgData);
+                
+                // 如果全局 playerSync 实例存在，转发消息
+                if (window.playerSync && typeof window.playerSync.handleMessage === 'function') {
+                    window.playerSync.handleMessage(msgData);
+                } else {
+                    console.warn('[RPC] playerSync 未初始化，无法处理播放控制消息');
+                }
             }
         };
 
@@ -783,5 +795,219 @@ const SyncManager = {
         return true;
     }
 };
+
+// ============================================
+// 播放控制同步协议 (Player Control Sync)
+// ============================================
+
+// 播放控制消息类型
+const PLAYER_SYNC_MSG = {
+    // 状态同步
+    STATE_SYNC: 'player:state_sync',      // 同步播放状态
+    STATE_REQUEST: 'player:state_request', // 请求当前状态
+    
+    // 控制指令
+    PLAY: 'player:play',           // 播放
+    PAUSE: 'player:pause',         // 暂停
+    STOP: 'player:stop',           // 停止
+    NEXT: 'player:next',           // 下一首
+    PREV: 'player:prev',           // 上一首
+    SEEK: 'player:seek',           // 跳转进度
+    SET_VOLUME: 'player:set_volume', // 设置音量
+    PLAY_SONG: 'player:play_song', // 播放指定歌曲
+    
+    // 设备角色
+    SET_ROLE: 'player:set_role',   // 设置设备角色
+    ROLE_CHANGED: 'player:role_changed', // 角色变更通知
+    
+    // 播放列表控制
+    ADD_TO_QUEUE: 'player:add_to_queue',     // 添加到播放队列
+    CLEAR_QUEUE: 'player:clear_queue',       // 清空队列
+    REMOVE_FROM_QUEUE: 'player:remove_from_queue', // 从队列移除
+    SET_QUEUE: 'player:set_queue',           // 设置播放队列
+};
+
+// 设备角色
+const DEVICE_ROLE = {
+    PLAYER: 'player',     // 播放器（电脑端）
+    CONTROLLER: 'controller', // 控制器（手机端）
+    BOTH: 'both'          // 两者兼具
+};
+
+// 播放控制客户端
+class PlayerSyncClient {
+    constructor(remoteClient) {
+        this.remoteClient = remoteClient;
+        this.role = DEVICE_ROLE.BOTH; // 默认两者兼具
+        this.onStateSync = null;      // 状态同步回调
+        this.onControlCommand = null; // 控制指令回调
+        this.onRoleChanged = null;    // 角色变更回调
+        this.stateSyncInterval = null; // 状态同步定时器
+    }
+
+    // 发送播放控制消息
+    async sendPlayerMessage(type, data = {}) {
+        if (!this.remoteClient || !this.remoteClient.isConnected) {
+            throw new Error('Not connected to remote');
+        }
+
+        const payload = {
+            name: 'onPlayerSyncAction',
+            data: { type, ...data, timestamp: Date.now() }
+        };
+
+        try {
+            const encoded = encodeData(JSON.stringify(payload));
+            this.remoteClient.ws.send(encoded);
+            return true;
+        } catch (e) {
+            console.error('[PlayerSync] 发送消息失败:', e);
+            return false;
+        }
+    }
+
+    // 设置设备角色
+    async setRole(role) {
+        this.role = role;
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.SET_ROLE, { role });
+        
+        // 如果是播放器角色，启动状态同步
+        if (role === DEVICE_ROLE.PLAYER || role === DEVICE_ROLE.BOTH) {
+            this.startStateSync();
+        } else {
+            this.stopStateSync();
+        }
+        
+        console.log('[PlayerSync] 设备角色已设置为:', role);
+    }
+
+    // 启动状态同步（播放器端）
+    startStateSync() {
+        if (this.stateSyncInterval) return;
+        
+        this.stateSyncInterval = setInterval(() => {
+            if (this.role === DEVICE_ROLE.PLAYER || this.role === DEVICE_ROLE.BOTH) {
+                this.syncState();
+            }
+        }, 1000); // 每秒同步一次状态
+    }
+
+    // 停止状态同步
+    stopStateSync() {
+        if (this.stateSyncInterval) {
+            clearInterval(this.stateSyncInterval);
+            this.stateSyncInterval = null;
+        }
+    }
+
+    // 同步播放状态
+    async syncState() {
+        if (!window.getPlayerState) return;
+        
+        const state = window.getPlayerState();
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.STATE_SYNC, { state });
+    }
+
+    // 请求远程状态
+    async requestState() {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.STATE_REQUEST);
+    }
+
+    // 控制指令
+    async play() {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.PLAY);
+    }
+
+    async pause() {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.PAUSE);
+    }
+
+    async stop() {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.STOP);
+    }
+
+    async next() {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.NEXT);
+    }
+
+    async prev() {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.PREV);
+    }
+
+    async seek(time) {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.SEEK, { time });
+    }
+
+    async setVolume(volume) {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.SET_VOLUME, { volume });
+    }
+
+    async playSong(song, index) {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.PLAY_SONG, { song, index });
+    }
+
+    async addToQueue(songs) {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.ADD_TO_QUEUE, { songs });
+    }
+
+    async clearQueue() {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.CLEAR_QUEUE);
+    }
+
+    async removeFromQueue(index) {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.REMOVE_FROM_QUEUE, { index });
+    }
+
+    async setQueue(songs) {
+        await this.sendPlayerMessage(PLAYER_SYNC_MSG.SET_QUEUE, { songs });
+    }
+
+    // 处理接收到的消息
+    handleMessage(msgData) {
+        const { type, ...data } = msgData;
+
+        console.log('[PlayerSync] 收到消息:', type, data);
+
+        switch (type) {
+            case PLAYER_SYNC_MSG.STATE_SYNC:
+                // 收到播放器状态同步
+                if (this.onStateSync) {
+                    this.onStateSync(data.state);
+                }
+                break;
+
+            case PLAYER_SYNC_MSG.STATE_REQUEST:
+                // 请求状态，立即同步
+                if (this.role === DEVICE_ROLE.PLAYER || this.role === DEVICE_ROLE.BOTH) {
+                    this.syncState();
+                }
+                break;
+
+            case PLAYER_SYNC_MSG.SET_ROLE:
+                // 对端设置角色
+                console.log('[PlayerSync] 对端角色变更为:', data.role);
+                if (this.onRoleChanged) {
+                    this.onRoleChanged(data.role);
+                }
+                break;
+
+            default:
+                // 其他控制指令
+                if (this.onControlCommand) {
+                    this.onControlCommand(type, data);
+                }
+                break;
+        }
+    }
+
+    // 关闭
+    close() {
+        this.stopStateSync();
+    }
+}
+
+// 全局播放控制同步实例
+window.PlayerSyncClient = PlayerSyncClient;
+window.playerSync = null;
 
 window.SyncManager = SyncManager;
