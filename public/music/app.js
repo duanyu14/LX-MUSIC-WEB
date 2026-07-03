@@ -182,6 +182,9 @@ let currentPlayingScope = 'network'; // Scope for active playback
 window.currentSearchScope = 'network'; // 'network', 'local_list', 'local_all' - Scope for UI view
 let currentPlayingSong = null; // Track currently playing song independently of view
 window.batchCollectSongs = null; // Store songs for batch collection modal
+let playFailCount = 0; // 播放失败计数
+let currentFailSongId = null; // 当前失败计数对应的歌曲ID
+const MAX_FAIL_COUNT = 2; // 最大失败次数
 const audio = document.getElementById('audio-player');
 let currentPlaybackRate = 1.0;
 
@@ -2862,6 +2865,27 @@ async function resolveSongUrl(song, quality, isSilent = false, isRetry = false) 
         if (result.errorMsg) throw new Error(result.errorMsg);
         return result;
     } catch (error) {
+        // 检查失败计数，如果已达上限则直接抛出，不再重试
+        if (currentFailSongId === song.id && playFailCount >= MAX_FAIL_COUNT) {
+            console.log(`[Player] 已达最大失败次数 ${MAX_FAIL_COUNT}，停止重试: ${song.name}`);
+            throw error;
+        }
+
+        // 每次解析失败，增加失败计数
+        if (currentFailSongId !== song.id) {
+            currentFailSongId = song.id;
+            playFailCount = 1;
+        } else {
+            playFailCount++;
+        }
+        console.log(`[Player] 解析失败计数: ${playFailCount}/${MAX_FAIL_COUNT} - ${song.name}`);
+
+        // 如果已达上限，直接抛出
+        if (playFailCount >= MAX_FAIL_COUNT) {
+            console.log(`[Player] 已达最大失败次数，停止音质降级和换源`);
+            throw error;
+        }
+
         // 区分“平台不支持”和“解析失败”
         const isPlatformNotSupported = error.message && (
             error.message.includes('未找到支持') ||
@@ -2880,8 +2904,8 @@ async function resolveSongUrl(song, quality, isSilent = false, isRetry = false) 
             return await resolveSongUrl(song, nextQuality, isSilent, true);
         }
 
-        // 核心增强：如果质量降级也失败了，且开启了自动尝试换源
-        if (settings.enableAutoSwitchSource && !isSilent) {
+        // 核心增强：如果质量降级也失败了，且开启了自动尝试换源且未达失败上限
+        if (settings.enableAutoSwitchSource && !isSilent && playFailCount < MAX_FAIL_COUNT) {
             console.log(`[AutoSource] 原始源解析失败，准备尝试全网匹配: ${song.name}`);
             const matchedSong = await findOtherSourceMatch(song);
             if (matchedSong) {
@@ -3588,6 +3612,15 @@ async function playSong(song, index, forceQuality = null, noPlay = false, isRetr
         console.log("[Player] Cleared pending auto-skip timer");
     }
 
+    // 如果不是重试（即新歌曲播放请求），重置失败计数
+    if (!isRetry) {
+        if (currentFailSongId !== song.id) {
+            playFailCount = 0;
+            currentFailSongId = song.id;
+            console.log(`[Player] 新歌曲播放，重置失败计数: ${song.name}`);
+        }
+    }
+
     const thisRequestId = ++loadingRequestCounter;
     currentLoadingSongId = thisRequestSongId;
     currentLoadingRequestId = thisRequestId;
@@ -3747,6 +3780,25 @@ async function playSong(song, index, forceQuality = null, noPlay = false, isRetr
             const retryHandler = () => {
                 console.warn(`[Player] ${currentSourceType} link failed, retrying online...`);
                 if (currentSourceType === 'cache') localStorage.removeItem(`lx_url_${cleanSongData(song).id}_${targetQuality}`);
+
+                // 增加播放失败计数
+                if (currentFailSongId !== song.id) {
+                    currentFailSongId = song.id;
+                    playFailCount = 1;
+                } else {
+                    playFailCount++;
+                }
+                console.log(`[Player] 播放失败计数: ${playFailCount}/${MAX_FAIL_COUNT} - ${song.name}`);
+
+                // 如果已达最大失败次数，停止重试，暂停播放
+                if (playFailCount >= MAX_FAIL_COUNT) {
+                    console.log(`[Player] 已达最大失败次数 ${MAX_FAIL_COUNT}，停止重试，暂停播放`);
+                    setPlayerStatus('播放失败（已达最大重试次数）', false);
+                    showError(`${song.name} 播放失败，已停止重试`);
+                    updatePlayButton(false);
+                    return;
+                }
+
                 playSong(song, index, targetQuality, noPlay, currentSourceType === 'server_cache' ? 'local_retry' : true);
             };
             audio.addEventListener('error', retryHandler, { once: true });
@@ -3756,6 +3808,36 @@ async function playSong(song, index, forceQuality = null, noPlay = false, isRetr
         }
 
         audio.src = finalUrl;
+
+        // 通用播放错误处理：仅在正常源时使用（缓存源已有专门的 retryHandler）
+        if (currentSourceType === 'normal') {
+            const playErrorHandler = () => {
+                if (currentLoadingSongId && currentLoadingSongId !== song.id) return;
+                console.warn(`[Player] Playback error for: ${song.name}`);
+
+                // 增加播放失败计数
+                if (currentFailSongId !== song.id) {
+                    currentFailSongId = song.id;
+                    playFailCount = 1;
+                } else {
+                    playFailCount++;
+                }
+                console.log(`[Player] 播放失败计数: ${playFailCount}/${MAX_FAIL_COUNT} - ${song.name}`);
+
+                // 如果已达最大失败次数，停止播放
+                if (playFailCount >= MAX_FAIL_COUNT) {
+                    console.log(`[Player] 已达最大失败次数 ${MAX_FAIL_COUNT}，停止播放`);
+                    setPlayerStatus('播放失败（已达最大重试次数）', false);
+                    showError(`${song.name} 播放失败，已停止重试`);
+                    updatePlayButton(false);
+                    return;
+                }
+            };
+            audio.addEventListener('error', playErrorHandler);
+            const cleanupPlayError = () => audio.removeEventListener('error', playErrorHandler);
+            audio.addEventListener('playing', cleanupPlayError, { once: true });
+            audio.addEventListener('pause', cleanupPlayError, { once: true });
+        }
 
         if (noPlay) {
             setPlayerStatus('', false);
@@ -3776,6 +3858,10 @@ async function playSong(song, index, forceQuality = null, noPlay = false, isRetr
             await audio.play();
 
             if (settings.enableCrossfade) fadeVolume(typeof currentVolume !== 'undefined' ? currentVolume : 1, 1000);
+
+            // 播放成功，重置失败计数
+            playFailCount = 0;
+            console.log(`[Player] 播放成功，重置失败计数: ${song.name}`);
 
             setPlayerStatus('', true);
             updatePlayButton(true);
@@ -3827,8 +3913,25 @@ async function playSong(song, index, forceQuality = null, noPlay = false, isRetr
         if (currentLoadingRequestId !== thisRequestId) return;
         console.error('[Player] Error:', error);
 
+        // 增加失败计数
+        if (currentFailSongId !== song.id) {
+            currentFailSongId = song.id;
+            playFailCount = 1;
+        } else {
+            playFailCount++;
+        }
+        console.log(`[Player] 播放失败计数: ${playFailCount}/${MAX_FAIL_COUNT} - ${song.name}`);
+
         setPlayerStatus('播放失败');
         showError(`播放失败: ${error.message || '未知错误'}`);
+
+        // 如果已达最大失败次数，停止自动下一首
+        if (playFailCount >= MAX_FAIL_COUNT) {
+            console.log(`[Player] 已达最大失败次数 ${MAX_FAIL_COUNT}，停止自动下一首`);
+            setPlayerStatus('播放失败（已达最大重试次数）', false);
+            updatePlayButton(false);
+            return;
+        }
 
         // 区分“平台不支持”错误
         const isPlatformNotSupported = error.message && (
@@ -4557,7 +4660,7 @@ async function restorePlaybackState() {
             song: state.song
         };
 
-        // 5. 延迟加载播放源（静默模式）并同步 Tab 状态
+        // 5. 延迟加载歌曲信息（仅恢复，不播放）
         setTimeout(() => {
             if (state.scope === 'network') {
                 switchTab('search');
@@ -4569,8 +4672,17 @@ async function restorePlaybackState() {
                 switchTab('songlist');
             }
 
-            // 初始化音频源但不立即播放（除非设置了自动播放，当前 playSong handles resumeTime）
+            // 仅恢复歌曲信息和进度，不自动播放
             playSong(state.song, currentIndex, null, true);
+
+            // 确保暂停状态
+            setTimeout(() => {
+                if (audio && !audio.paused) {
+                    audio.pause();
+                }
+                setPlayerStatus('已暂停', false);
+                updatePlayButton(false);
+            }, 1000);
         }, 800);
 
     } catch (e) {

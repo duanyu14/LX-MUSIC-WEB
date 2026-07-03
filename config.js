@@ -17,7 +17,7 @@ module.exports = {
     {
       "name": "admin",
       "password": "password",
-      "dataPath": "D:\\Documents\\Project\\lxmusic\\data\\users\\admin_21232f"
+      "dataPath": "D:\\Documents\\Project\\music\\web\\data\\users\\admin_21232f"
     }
   ],
   "frontend.password": "123456",

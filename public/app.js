@@ -464,7 +464,7 @@ class App {
 
     parseChangelogVersions(content) {
         const versions = [];
-        // 匹配 ## 开头到版本号的格式，如 ## 🎉 v1.9.5.2 (2026-06-05)
+        // 匹配 ## 开头到版本号的格式，如 ## 🎉 v1.9.5.3 (2026-06-05)
         const lines = content.split('\n');
         for (const line of lines) {
             const trimmedLine = line.trim();
