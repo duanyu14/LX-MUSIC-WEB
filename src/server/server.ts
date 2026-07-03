@@ -22,6 +22,7 @@ const musicSdk = musicSdkRaw as any
 import { initUserApis, callUserApiGetMusicUrl, isSourceSupported, getLoadedApis } from './userApi'
 import * as customSourceHandlers from './customSourceHandlers'
 import * as fileCache from './fileCache'
+import { isRemoteControlRequest, handleRemoteControlConnection, getRemoteControlStatus } from './remoteControl'
 import crypto from 'node:crypto'
 import needle from 'needle'
 const { MusicTagger, MetaPicture } = require('music-tag-native')
@@ -5439,6 +5440,11 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
   }
 
   wss.on('connection', function (socket, request) {
+    if (isRemoteControlRequest(request.url)) {
+      handleRemoteControlConnection(socket, request)
+      return
+    }
+
     socket.isReady = false
     socket.moduleReadys = {
       list: false,
@@ -5541,6 +5547,15 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
   httpServer.on('upgrade', function upgrade(request, socket, head) {
     socket.addListener('error', onSocketError)
 
+    if (isRemoteControlRequest(request.url)) {
+      socket.removeListener('error', onSocketError)
+      delete request.headers['sec-websocket-extensions']
+      wss?.handleUpgrade(request, socket, head, function done(ws) {
+        wss?.emit('connection', ws, request)
+      })
+      return
+    }
+
     // 调用全局定义的 authConnection (在文件顶部约113行已经定义过)
     authConnection(request, (err, success) => {
       // 如果报错或者 success 为 false，则拒绝连接
@@ -5564,15 +5579,19 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
 
   const interval = setInterval(() => {
     wss?.clients.forEach(socket => {
+      const isSyncSocket = !!(socket as LX.Socket).keyInfo
+      
       if (socket.isAlive == false) {
-        syncLog.info('alive check false:', socket.userInfo.name, socket.keyInfo.deviceName)
+        if (isSyncSocket) {
+          syncLog.info('alive check false:', (socket as LX.Socket).userInfo?.name, (socket as LX.Socket).keyInfo?.deviceName)
+        }
         socket.terminate()
         return
       }
 
       socket.isAlive = false
       socket.ping(noop)
-      if (socket.keyInfo.isMobile) socket.send('ping', noop)
+      if (isSyncSocket && (socket as LX.Socket).keyInfo.isMobile) socket.send('ping', noop)
     })
   }, 30000)
 
