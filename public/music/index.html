@@ -1108,7 +1108,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#" onclick="RemoteControlPanel.open()" id="tab-remote"
+                        <a href="#" onclick="switchTab('remote')" id="tab-remote"
                             class="flex items-center px-6 py-4 t-text-muted hover:t-bg-main transition-colors duration-200 min-h-[48px]">
                             <i class="fas fa-satellite-dish w-6 text-center text-lg"></i>
                             <span class="ml-3 font-medium">远程控制</span>
@@ -2293,6 +2293,171 @@
                         <div class="text-center py-20 text-gray-500 animate-fade-in">
                             <i class="fas fa-circle-notch fa-spin text-4xl mb-4 text-emerald-500"></i>
                             <p class="font-bold tracking-wider">正在加载本地音乐...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Remote Control View (P2P) -->
+                <div id="view-remote"
+                    class="absolute inset-0 flex flex-col px-2 pt-2 md:px-6 md:pt-6 pb-44 md:pb-32 hidden opacity-0 transition-all duration-300 overflow-hidden">
+                    <!-- Top: Connection Info Bar -->
+                    <div class="t-bg-panel rounded-xl border t-border-main shadow-sm p-3 md:p-4 mb-2 md:mb-3 shrink-0">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
+                            <div class="flex items-center gap-2 md:gap-3 min-w-0">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                                    <i class="fas fa-satellite-dish text-emerald-500"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-xs t-text-muted">本机连接地址</div>
+                                    <div id="rc-local-addr" class="text-sm md:text-base font-mono font-bold t-text-main truncate">未启动</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 md:gap-3 shrink-0">
+                                <label class="flex items-center gap-2 cursor-pointer select-none">
+                                    <span class="text-xs t-text-muted">配对码</span>
+                                    <input type="text" id="rc-pair-code" placeholder="留空=免认证"
+                                        maxlength="6"
+                                        class="w-24 px-2 py-1 text-sm t-bg-main border t-border-main rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 t-text-main font-mono">
+                                </label>
+                                <button id="rc-scan-btn" onclick="RemoteControlPanel.scanDevices()"
+                                    class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm flex items-center gap-1.5">
+                                    <i class="fas fa-search text-xs"></i>
+                                    <span>扫描</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content: Device List + Control Panel -->
+                    <div class="flex-1 flex flex-col md:flex-row gap-2 md:gap-3 overflow-hidden">
+                        <!-- Left: Device List -->
+                        <div class="md:w-80 md:shrink-0 flex flex-col t-bg-panel rounded-xl border t-border-main shadow-sm overflow-hidden">
+                            <div class="flex items-center justify-between px-3 py-2 border-b t-border-main shrink-0">
+                                <div class="text-sm font-bold t-text-main">设备列表</div>
+                                <span id="rc-device-count" class="text-xs t-text-muted">0 台</span>
+                            </div>
+                            <div class="p-2 border-b t-border-main shrink-0 flex gap-1.5">
+                                <input type="text" id="rc-manual-ip" placeholder="手动输入 IP"
+                                    class="flex-1 px-2 py-1.5 text-xs t-bg-main border t-border-main rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 t-text-main">
+                                <input type="number" id="rc-manual-port" placeholder="端口" value="9528"
+                                    class="w-16 px-2 py-1.5 text-xs t-bg-main border t-border-main rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 t-text-main">
+                                <button onclick="RemoteControlPanel.connectManual()"
+                                    class="px-2 py-1.5 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors">连接</button>
+                            </div>
+                            <div id="rc-device-list" class="flex-1 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
+                                <div class="text-xs t-text-muted text-center py-6">点击「扫描」查找设备</div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Control Panel -->
+                        <div class="flex-1 flex flex-col t-bg-panel rounded-xl border t-border-main shadow-sm overflow-hidden">
+                            <div id="rc-control-empty" class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                                <i class="fas fa-hand-pointer text-5xl t-text-muted opacity-30 mb-4"></i>
+                                <div class="text-base font-bold t-text-main mb-1">未选择设备</div>
+                                <div class="text-xs t-text-muted">从左侧设备列表选择一个设备进行控制</div>
+                            </div>
+                            <div id="rc-control-panel" class="hidden flex-1 flex flex-col overflow-hidden">
+                                <!-- Connected device header -->
+                                <div class="flex items-center gap-3 px-3 py-2.5 border-b t-border-main shrink-0">
+                                    <div class="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                                        <i id="rc-connected-icon" class="fas fa-desktop text-emerald-500"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div id="rc-connected-name" class="text-sm font-bold t-text-main truncate">设备名称</div>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                            <span id="rc-connected-type" class="text-xs t-text-muted">已连接</span>
+                                        </div>
+                                    </div>
+                                    <button onclick="RemoteControlPanel.disconnect()"
+                                        class="px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">断开</button>
+                                </div>
+
+                                <!-- Scrollable content -->
+                                <div class="flex-1 overflow-y-auto custom-scrollbar p-3 md:p-4">
+                                    <!-- Song info -->
+                                    <div class="text-center mb-4">
+                                        <div id="rc-song-cover" class="w-24 h-24 md:w-28 md:h-28 mx-auto rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg flex items-center justify-center mb-3">
+                                            <i class="fas fa-music text-white text-3xl"></i>
+                                        </div>
+                                        <div id="rc-song-name" class="font-bold t-text-main text-base truncate mb-0.5">暂无播放</div>
+                                        <div id="rc-song-singer" class="text-xs t-text-muted truncate">-</div>
+                                    </div>
+
+                                    <!-- Progress bar -->
+                                    <div class="mb-4">
+                                        <div class="relative h-1.5 t-bg-main rounded-full mb-1.5 cursor-pointer" id="rc-progress-bar">
+                                            <div id="rc-progress-fill" class="absolute left-0 top-0 h-full bg-emerald-500 rounded-full" style="width: 0%"></div>
+                                            <div id="rc-progress-thumb" class="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-emerald-500 rounded-full shadow-md" style="left: 0%"></div>
+                                        </div>
+                                        <div class="flex justify-between text-xs t-text-muted">
+                                            <span id="rc-position">0:00</span>
+                                            <span id="rc-duration">0:00</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Control buttons -->
+                                    <div class="flex items-center justify-center gap-3 md:gap-4 mb-4 flex-wrap">
+                                        <button onclick="RemoteControlPanel.prev()" class="w-11 h-11 rounded-full hover:t-bg-main flex items-center justify-center t-text-muted hover:text-emerald-500 transition-colors">
+                                            <i class="fas fa-step-backward"></i>
+                                        </button>
+                                        <button onclick="RemoteControlPanel.togglePlay()" class="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg transition-colors">
+                                            <i id="rc-play-icon" class="fas fa-play ml-0.5"></i>
+                                        </button>
+                                        <button onclick="RemoteControlPanel.next()" class="w-11 h-11 rounded-full hover:t-bg-main flex items-center justify-center t-text-muted hover:text-emerald-500 transition-colors">
+                                            <i class="fas fa-step-forward"></i>
+                                        </button>
+                                        <button onclick="RemoteControlPanel.toggleMute()" class="w-10 h-10 rounded-full hover:t-bg-main flex items-center justify-center t-text-muted hover:text-emerald-500 transition-colors" title="静音">
+                                            <i id="rc-mute-icon" class="fas fa-volume-up"></i>
+                                        </button>
+                                        <button onclick="RemoteControlPanel.togglePlayMode()" class="w-10 h-10 rounded-full hover:t-bg-main flex items-center justify-center t-text-muted hover:text-emerald-500 transition-colors" title="播放模式">
+                                            <i id="rc-mode-icon" class="fas fa-redo"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Volume -->
+                                    <div class="mb-4">
+                                        <div class="flex items-center gap-2">
+                                            <i class="fas fa-volume-down text-xs t-text-muted shrink-0"></i>
+                                            <input type="range" id="rc-volume" min="0" max="100" value="75"
+                                                oninput="RemoteControlPanel.onVolumeInput(this.value)"
+                                                class="flex-1 accent-emerald-500">
+                                            <i class="fas fa-volume-up text-xs t-text-muted shrink-0"></i>
+                                            <span id="rc-volume-text" class="text-xs t-text-muted w-8 text-right font-mono">75</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Search on remote device -->
+                                    <div class="border-t t-border-main pt-3">
+                                        <div class="text-xs font-bold t-text-main mb-2"><i class="fas fa-search mr-1"></i>在远端搜索</div>
+                                        <div class="flex gap-1.5 mb-2">
+                                            <input type="text" id="rc-search-input" placeholder="搜索歌曲..."
+                                                onkeypress="if(event.key==='Enter')RemoteControlPanel.search()"
+                                                class="flex-1 px-2 py-1.5 text-xs t-bg-main border t-border-main rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 t-text-main">
+                                            <button onclick="RemoteControlPanel.search()"
+                                                class="px-2.5 py-1.5 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors">搜索</button>
+                                        </div>
+                                        <div id="rc-search-source" class="flex gap-1 mb-2">
+                                            <button data-src="wy" onclick="RemoteControlPanel.setSearchSource('wy')" class="flex-1 py-1 text-xs t-bg-main border t-border-main rounded-md hover:border-emerald-500">网易云</button>
+                                            <button data-src="tx" onclick="RemoteControlPanel.setSearchSource('tx')" class="flex-1 py-1 text-xs t-bg-main border t-border-main rounded-md hover:border-emerald-500">QQ</button>
+                                            <button data-src="kg" onclick="RemoteControlPanel.setSearchSource('kg')" class="flex-1 py-1 text-xs t-bg-main border t-border-main rounded-md hover:border-emerald-500">酷狗</button>
+                                            <button data-src="kw" onclick="RemoteControlPanel.setSearchSource('kw')" class="flex-1 py-1 text-xs t-bg-main border t-border-main rounded-md hover:border-emerald-500">酷我</button>
+                                        </div>
+                                        <div id="rc-search-results" class="max-h-48 overflow-y-auto custom-scrollbar space-y-1 text-xs"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status bar -->
+                    <div class="mt-2 md:mt-3 px-3 py-2 t-bg-panel rounded-xl border t-border-main shadow-sm shrink-0 flex items-center justify-between">
+                        <div id="rc-status-text" class="text-xs t-text-muted flex items-center gap-1.5">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                            <span id="rc-status-text-content">未连接</span>
+                        </div>
+                        <div class="text-xs t-text-muted">
+                            <span id="rc-bridge-status">桥接: 未知</span>
                         </div>
                     </div>
                 </div>

@@ -37,5 +37,8 @@ module.exports = {
     "tx",
     "wy"
   ],
-  "cache.namingPattern": "standard"
+  "cache.namingPattern": "standard",
+  "p2pRemote.enabled": true,
+  "p2pRemote.port": 9528,
+  "p2pRemote.pairCode": ""
 }

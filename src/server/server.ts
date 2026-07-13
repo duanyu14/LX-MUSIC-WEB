@@ -22,7 +22,6 @@ const musicSdk = musicSdkRaw as any
 import { initUserApis, callUserApiGetMusicUrl, isSourceSupported, getLoadedApis } from './userApi'
 import * as customSourceHandlers from './customSourceHandlers'
 import * as fileCache from './fileCache'
-import { isRemoteControlRequest, handleRemoteControlConnection, getRemoteControlStatus } from './remoteControl'
 import crypto from 'node:crypto'
 import needle from 'needle'
 const { MusicTagger, MetaPicture } = require('music-tag-native')
@@ -5440,11 +5439,6 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
   }
 
   wss.on('connection', function (socket, request) {
-    if (isRemoteControlRequest(request.url)) {
-      handleRemoteControlConnection(socket, request)
-      return
-    }
-
     socket.isReady = false
     socket.moduleReadys = {
       list: false,
@@ -5546,15 +5540,6 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
 
   httpServer.on('upgrade', function upgrade(request, socket, head) {
     socket.addListener('error', onSocketError)
-
-    if (isRemoteControlRequest(request.url)) {
-      socket.removeListener('error', onSocketError)
-      delete request.headers['sec-websocket-extensions']
-      wss?.handleUpgrade(request, socket, head, function done(ws) {
-        wss?.emit('connection', ws, request)
-      })
-      return
-    }
 
     // 调用全局定义的 authConnection (在文件顶部约113行已经定义过)
     authConnection(request, (err, success) => {

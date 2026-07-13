@@ -49,6 +49,11 @@ const config: LX.Config = {
   'subsonic.path': '/rest', // Subsonic 访问路径
   'singer.sourcePriority': ['tx', 'wy'], // 歌手信息源优先级
   'cache.namingPattern': 'standard', // 缓存命名规则
+
+  // P2P 互控配置（默认关闭，需手动启用）
+  'p2pRemote.enabled': false,
+  'p2pRemote.port': 9528,
+  'p2pRemote.pairCode': '',
 }
 
 export default config

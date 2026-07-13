@@ -12,6 +12,8 @@ declare global {
     saveConfig: () => void
     lastCpuSample?: { idle: number, total: number }
     lastProcessSample?: { cpu: NodeJS.CpuUsage, time: number }
+    p2pDeviceId?: string
+    version?: string
   }
 
   // var envParams: LX.EnvParams

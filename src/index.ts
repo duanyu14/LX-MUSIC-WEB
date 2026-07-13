@@ -79,6 +79,8 @@ global.lx = {
   config: defaultConfig,
   staticPath: process.env.STATIC_PATH ?? path.join(process.cwd(), 'public'),
   saveConfig: saveConfigToFile,
+  p2pDeviceId: 'web_' + Math.random().toString(36).substring(2, 10),
+  version: '1.9.5',
 }
 
 const mergeConfigFileEnv = (config: Partial<Record<ENV_PARAMS_Value_Type, string>>) => {
@@ -365,6 +367,26 @@ require('@/utils/migrate').default(global.lx.dataPath, global.lx.userPath)
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { startServer } = require('@/server')
 
+// P2P 互控服务器启动
+let p2pRemoteStarted = false
+const startP2PRemoteIfNeeded = () => {
+  if (p2pRemoteStarted) return
+  if (!global.lx.config['p2pRemote.enabled']) return
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { startP2PRemoteServer } = require('@/server/p2pRemote')
+  p2pRemoteStarted = true
+  startP2PRemoteServer({
+    enabled: true,
+    port: global.lx.config['p2pRemote.port'] ?? 9528,
+    pairCode: global.lx.config['p2pRemote.pairCode'] ?? '',
+  }).then(() => {
+    console.log('[P2PRemote] Server started')
+  }).catch((err: Error) => {
+    console.error('[P2PRemote] Failed to start:', err.message)
+    p2pRemoteStarted = false
+  })
+}
+
 // 初始化 WebDAV 同步
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const WebDAVSync = require('@/utils/webdavSync').default
@@ -443,7 +465,11 @@ if (!fs.existsSync(openDir)) {
 // 启动前最后保存一次合并后的配置，确保环境变量被固化到 config.js 中
 saveConfigToFile()
 
-startServer(global.lx.config.port, global.lx.config.bindIP)
+startServer(global.lx.config.port, global.lx.config.bindIP).then(() => {
+  startP2PRemoteIfNeeded()
+}).catch((err: Error) => {
+  console.error('Server start error:', err)
+})
 
 // 监控 config.js 变动以实现热重载 (由于 nodemon 已忽略该文件)
 const rootConfigPath = process.env.CONFIG_PATH || path.join(process.cwd(), 'config.js')
@@ -466,6 +492,7 @@ if (fs.existsSync(rootConfigPath)) {
               interval: global.lx.config['sync.interval'],
             })
           }
+          startP2PRemoteIfNeeded()
         } catch (e) {
           console.error('Hot-reload config.js failed:', e)
         }

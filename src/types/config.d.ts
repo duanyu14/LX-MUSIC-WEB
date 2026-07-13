@@ -182,6 +182,13 @@ declare namespace LX {
      * 缓存存储位置
      */
     serverCacheLocation?: string
+
+    /**
+     * P2P 互控服务配置
+     */
+    'p2pRemote.enabled'?: boolean
+    'p2pRemote.port'?: number
+    'p2pRemote.pairCode'?: string
   }
 }
 

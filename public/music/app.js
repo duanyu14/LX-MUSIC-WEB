@@ -858,6 +858,32 @@ function switchTab(tabId) {
         document.getElementById('page-title').innerText = "本地音乐";
     }
 
+    if (tabId === 'remote') {
+        document.getElementById('page-title').innerText = "远程控制";
+        // 切换到远程控制页面时刷新本机地址显示
+        if (window.RemoteControlPanel && typeof window.RemoteControlPanel.scanDevices !== 'undefined') {
+            // 自动刷新一次本机地址
+            const addrEl = document.getElementById('rc-local-addr');
+            if (addrEl && addrEl.textContent === '未启动') {
+                fetch(`${location.protocol === 'https:' ? 'https:' : 'http:'}//${location.hostname}:9528/info`)
+                    .then(r => r.ok ? r.json() : null)
+                    .then(info => {
+                        if (info) {
+                            addrEl.textContent = (info.addresses && info.addresses.length > 0)
+                                ? `ws://${info.addresses[0]}:${info.port}`
+                                : `ws://127.0.0.1:${info.port}`;
+                            const bEl = document.getElementById('rc-bridge-status');
+                            if (bEl) bEl.textContent = '桥接: 已连接';
+                        }
+                    })
+                    .catch(() => {
+                        const bEl = document.getElementById('rc-bridge-status');
+                        if (bEl) bEl.textContent = '桥接: 未连接';
+                    });
+            }
+        }
+    }
+
     if (tabId === 'my-songs') {
         document.getElementById('page-title').innerText = "我的歌曲";
         // 刷新歌单数据
