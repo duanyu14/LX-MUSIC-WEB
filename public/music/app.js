@@ -1222,6 +1222,46 @@ function removeFromQueue(index) {
 }
 window.removeFromQueue = removeFromQueue;
 
+function addToQueue(song) {
+    if (!song || !song.id) return;
+    if (!currentPlaylist) window.currentPlaylist = [];
+    if (currentPlaylist.some(s => (s.songId || s.id) === (song.songId || song.id))) {
+        showInfo('歌曲已在队列中');
+        return;
+    }
+    currentPlaylist.push({
+        ...song,
+        id: song.songId || song.id,
+    });
+    renderQueue();
+    savePlaybackState();
+    showSuccess('已添加到播放队列');
+}
+window.addToQueue = addToQueue;
+
+function reorderQueue(fromIndex, toIndex) {
+    if (!currentPlaylist) return;
+    if (fromIndex < 0 || fromIndex >= currentPlaylist.length) return;
+    if (toIndex < 0 || toIndex >= currentPlaylist.length) return;
+    const [item] = currentPlaylist.splice(fromIndex, 1);
+    currentPlaylist.splice(toIndex, 0, item);
+    if (typeof currentIndex !== 'undefined') {
+        if (fromIndex === currentIndex) currentIndex = toIndex;
+        else if (fromIndex < currentIndex && toIndex >= currentIndex) currentIndex--;
+        else if (fromIndex > currentIndex && toIndex <= currentIndex) currentIndex++;
+    }
+    renderQueue();
+    savePlaybackState();
+}
+window.reorderQueue = reorderQueue;
+
+function getFavoriteStatus() {
+    if (typeof currentPlayingSong === 'undefined' || !currentPlayingSong) return false;
+    if (typeof favoriteList === 'undefined') return false;
+    return favoriteList.some(s => (s.songId || s.id) === (currentPlayingSong.songId || currentPlayingSong.id));
+}
+window.getFavoriteStatus = getFavoriteStatus;
+
 async function clearQueue() {
     if (!currentPlaylist || currentPlaylist.length === 0) return;
     if (await showSelect('清空队列', '确定要清空当前播放队列吗？', { danger: true })) {
@@ -3618,6 +3658,27 @@ function playFromView(index) {
 window.playFromView = playFromView;
 
 async function playSong(song, index, forceQuality = null, noPlay = false, isRetry = false, shouldAddToDefault = null) {
+    if (window.P2PRemote?.currentCastTarget) {
+        window.P2PRemote.sendCommand(window.P2PRemote.currentCastTarget.connId, 'play_song', {
+            songInfo: {
+                name: song.name || '',
+                singer: song.singer || '',
+                source: song.source || '',
+                songId: song.songId || song.id || '',
+                albumName: song.albumName || song.album || '',
+                interval: song.interval || '',
+                picUrl: song.picUrl || song.img || song.pic || '',
+                img: song.img || song.pic || '',
+                pic: song.pic || '',
+                songmid: song.songmid || song.songId || '',
+                hash: song.hash || '',
+                copyrightId: song.copyrightId || '',
+                albumId: song.albumId || '',
+                types: song.types || [],
+            }
+        });
+        return;
+    }
     console.log("[Player] playSong called - song:", song.name, "index:", index, "forceQuality:", forceQuality, "noPlay:", noPlay, "isRetry:", isRetry);
     
     // 1. Debounce / Lock: If already loading this song, ignore click
@@ -4336,6 +4397,13 @@ function updatePlayerInfo(song) {
     // Bind click to Open Modal
     btnLike.onclick = (e) => {
         e.stopPropagation();
+        if (window.P2PRemote?.currentCastTarget) {
+            const target = window.P2PRemote.currentCastTarget;
+            const peer = window.P2PRemote.getPeer(target.connId);
+            const cmd = peer?.state?.isFavorite ? 'uncollect_current_song' : 'collect_current_song';
+            window.P2PRemote.sendCommand(target.connId, cmd);
+            return;
+        }
         openPlaylistAddModal();
     };
 
@@ -4349,6 +4417,10 @@ function updatePlayerInfo(song) {
 }
 
 async function togglePlay() {
+    if (window.P2PRemote?.currentCastTarget) {
+        window.P2PRemote.sendCommand(window.P2PRemote.currentCastTarget.connId, 'toggle_play');
+        return;
+    }
     console.log("[Player] togglePlay called, current state:", audio.paused ? "paused" : "playing");
     
     // 忽略因为长按触发的 click 事件
@@ -4402,6 +4474,10 @@ function updatePlayButton(isPlaying) {
  * @param {Number} depth 递归尝试深度，防止死循环
  */
 function playNext(depth = 0) {
+    if (window.P2PRemote?.currentCastTarget) {
+        window.P2PRemote.sendCommand(window.P2PRemote.currentCastTarget.connId, 'next');
+        return;
+    }
     if (depth > 10) {
         console.warn('[Queue] Too many unplayable songs skipped, stopping.');
         return;
@@ -4425,6 +4501,10 @@ function playNext(depth = 0) {
 }
 
 function playPrev() {
+    if (window.P2PRemote?.currentCastTarget) {
+        window.P2PRemote.sendCommand(window.P2PRemote.currentCastTarget.connId, 'prev');
+        return;
+    }
     console.log("[Player] playPrev called, currentIndex:", currentIndex, "playlistLength:", currentPlaylist.length, "playMode:", playMode);
     
     if (currentPlaylist.length === 0) {
@@ -4499,6 +4579,8 @@ function fadeVolume(targetVolume, duration = 800) {
 
 // Audio Events
 audio.addEventListener('timeupdate', () => {
+    if (window.P2PRemote?._updatingFromRemote) return;
+    if (window.P2PRemote?.currentCastTarget) return;
     if (isDragging === 'progress') return; // Skip updating UI while user is dragging
 
     const current = audio.currentTime;
@@ -4883,6 +4965,17 @@ function updateMediaSessionMetadata(song) {
 
 
 function seek(e) {
+    if (window.P2PRemote?.currentCastTarget) {
+        const container = document.getElementById('progress-container');
+        const rect = container ? container.getBoundingClientRect() : null;
+        const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        const pct = rect ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) : 0;
+        const target = window.P2PRemote.currentCastTarget;
+        const peer = window.P2PRemote.getPeer(target.connId);
+        const position = pct * (peer?.state?.duration || 0);
+        window.P2PRemote.sendCommand(target.connId, 'seek', { position });
+        return;
+    }
     // Prevent seek if audio is not ready or has infinite duration (live stream)
     if (!audio.duration || !Number.isFinite(audio.duration)) return;
 
@@ -4908,6 +5001,15 @@ updateVolumeUI();
 
 // 设置音量
 function setVolume(e) {
+    if (window.P2PRemote?.currentCastTarget) {
+        const container = document.getElementById('volume-container');
+        const rect = container ? container.getBoundingClientRect() : null;
+        const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        const pct = rect ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) : 0;
+        const volume = Math.round(pct * 100);
+        window.P2PRemote.sendCommand(window.P2PRemote.currentCastTarget.connId, 'volume', { volume });
+        return;
+    }
     const container = document.getElementById('volume-container');
     const rect = container.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -4929,6 +5031,10 @@ function setVolume(e) {
 
 // 切换静音
 function toggleMute() {
+    if (window.P2PRemote?.currentCastTarget) {
+        window.P2PRemote.sendCommand(window.P2PRemote.currentCastTarget.connId, 'toggle_mute');
+        return;
+    }
     isMuted = !isMuted;
     audio.muted = isMuted;
     updateVolumeUI();
@@ -4960,6 +5066,11 @@ let playMode = 'list'; // 'list': 列表循环, 'single': 单曲循环, 'random'
 
 // 设置播放模式
 function setPlayMode(mode) {
+    if (window.P2PRemote?.currentCastTarget) {
+        const map = { list: 'loop_list', single: 'loop_single', random: 'shuffle', order: 'sequential' };
+        window.P2PRemote.sendCommand(window.P2PRemote.currentCastTarget.connId, 'set_play_mode', { mode: map[mode] || 'loop_list' });
+        return;
+    }
     playMode = mode;
     // [Random Prefetch Fix] 切换模式时清空预读预选索引
     preSelectedNextIndex = null;
@@ -5000,6 +5111,10 @@ function togglePlaybackRateMenu(e) {
 
 // 设置播放倍速
 function setPlaybackRate(rate) {
+    if (window.P2PRemote?.currentCastTarget) {
+        window.P2PRemote.sendCommand(window.P2PRemote.currentCastTarget.connId, 'set_playback_rate', { rate: parseFloat(rate) });
+        return;
+    }
     currentPlaybackRate = parseFloat(rate);
     audio.playbackRate = currentPlaybackRate;
     if (lyricPlayer) {
@@ -6224,14 +6339,22 @@ function toggleLyrics(fromPopState = false) {
 
         // Update UI
         if (currentPlayingSong) {
-            updateDetailInfo(currentPlayingSong);
+            // 投屏模式：使用远端歌曲数据获取歌词
+            const remoteState = window.P2PRemote?.lastRemoteState;
+            const songToUse = (window.P2PRemote?.currentCastTarget && remoteState?.currentSong)
+                ? remoteState.currentSong
+                : currentPlayingSong;
+            updateDetailInfo(songToUse);
             // If no lyrics yet, try fetch
             if (currentLyricLines.length === 0) {
-                fetchLyric(currentPlayingSong);
+                fetchLyric(songToUse);
             }
             // 仅在音频正在播放时才启动歌词滚动，防止暂停时打开详情页歌词自走
             if (lyricPlayer && !audio.paused) {
-                lyricPlayer.play(audio.currentTime * 1000);
+                const startTime = window.P2PRemote?.currentCastTarget && remoteState?.position != null
+                    ? remoteState.position * 1000
+                    : audio.currentTime * 1000;
+                lyricPlayer.play(startTime);
             }
             setTimeout(() => scrollToActiveLine(true), 100);
         }
@@ -8791,6 +8914,13 @@ function collectCurrentSongList() {
 }
 
 async function toggleLove() {
+    if (window.P2PRemote?.currentCastTarget) {
+        const target = window.P2PRemote.currentCastTarget;
+        const remoteState = window.P2PRemote.lastRemoteState;
+        const command = remoteState?.isFavorite ? 'uncollect_current_song' : 'collect_current_song';
+        window.P2PRemote.sendCommand(target.connId, command);
+        return;
+    }
     if (!currentListData || currentIndex < 0) return;
     const song = currentPlaylist[currentIndex];
 
@@ -10145,6 +10275,10 @@ function clearCommentCache() {
 
 // 解决变量名不一致问题
 function getActiveSongInfo() {
+    const remoteState = window.P2PRemote?.lastRemoteState;
+    if (window.P2PRemote?.currentCastTarget && remoteState?.currentSong) {
+        return remoteState.currentSong;
+    }
     if (typeof currentPlayingSong !== 'undefined' && currentPlayingSong) return currentPlayingSong;
     return null;
 }
@@ -10883,6 +11017,30 @@ function showSuccess(message) { showToast('success', message, 2000); }
 function showInfo(message) { showToast('info', message, 2000); }
 function showError(message) { showToast('error', message, 2000); }
 
+function addToQueue(song) {
+    if (!song || !currentPlaylist) return;
+    const id = song.songId || song.id;
+    if (currentPlaylist.some(s => (s.songId || s.id) === id)) return;
+    currentPlaylist.push(song);
+    const drawer = document.getElementById('queue-drawer');
+    if (drawer && !drawer.classList.contains('translate-x-full')) {
+        if (typeof renderQueue === 'function') renderQueue();
+    }
+}
+window.addToQueue = addToQueue;
+
+function reorderQueue(fromIndex, toIndex) {
+    if (!currentPlaylist || fromIndex < 0 || toIndex < 0) return;
+    if (fromIndex >= currentPlaylist.length || toIndex >= currentPlaylist.length) return;
+    const [item] = currentPlaylist.splice(fromIndex, 1);
+    currentPlaylist.splice(toIndex, 0, item);
+    if (currentIndex === fromIndex) currentIndex = toIndex;
+    else if (fromIndex < currentIndex && toIndex >= currentIndex) currentIndex--;
+    else if (fromIndex > currentIndex && toIndex <= currentIndex) currentIndex++;
+    if (typeof renderQueue === 'function') renderQueue();
+}
+window.reorderQueue = reorderQueue;
+
 /**
  * 全局加载提示 (showLoading)
  */
@@ -11080,6 +11238,9 @@ document.addEventListener('mousedown', (e) => {
         closeSleepTimerModal();
     }
 });
+
+window.setSleepTimer = setSleepTimer;
+window.cancelSleepTimer = cancelSleepTimer;
 
 // 监听窗口大小变化
 window.addEventListener('resize', () => {

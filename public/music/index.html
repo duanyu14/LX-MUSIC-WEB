@@ -4302,13 +4302,27 @@
                         class="font-bold t-text-main truncate text-sm md:text-base dynamic-marquee min-w-0 w-fit"
                         data-text="暂无播放">暂无播放</div>
                     <div id="player-source" class="flex-shrink-0"></div>
+                    <!-- Cast indicator -->
+                    <button id="btn-cast"
+                        class="hidden t-text-muted hover:t-text-primary text-xs flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md transition-colors"
+                        onclick="P2PRemote.toggleCastMenu(event)" title="选择投屏设备">
+                        <i class="fas fa-satellite-dish"></i>
+                    </button>
                 </div>
                 <div class="flex flex-col min-w-0">
                     <div id="player-artist"
                         class="text-xs text-gray-500 truncate dynamic-marquee min-w-0 w-fit self-start"
                         data-text="选择一首歌曲播放">选择一首歌曲播放</div>
                     <div id="player-status" class="text-xs text-emerald-600 font-medium whitespace-nowrap"></div>
+                    <div id="cast-target-label" class="hidden text-[10px] t-text-muted truncate">
+                        <i class="fas fa-satellite-dish mr-0.5"></i><span id="cast-target-name"></span>
+                    </div>
                 </div>
+            </div>
+            <!-- Cast menu -->
+            <div id="cast-menu"
+                class="hidden absolute bottom-full left-4 mb-2 w-48 t-bg-panel rounded-xl border t-border-main shadow-lg overflow-hidden z-50 text-xs">
+                <div id="cast-menu-list"></div>
             </div>
             <!-- Action Buttons (Mobile Compact) -->
             <div

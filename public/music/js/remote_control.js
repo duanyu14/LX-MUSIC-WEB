@@ -36,21 +36,51 @@
     const getLocalState = () => {
         const song = (typeof window !== 'undefined' && window.currentPlayingSong) || null;
         const audioEl = typeof audio !== 'undefined' ? audio : null;
-        return {
-            playing: audioEl ? !audioEl.paused : false,
-            position: audioEl ? (audioEl.currentTime || 0) : 0,
-            duration: audioEl ? (audioEl.duration || 0) : 0,
-            volume: Math.round((typeof currentVolume !== 'undefined' ? currentVolume : (audioEl ? audioEl.volume : 0.75)) * 100),
-            muted: (typeof isMuted !== 'undefined' ? isMuted : false) || (audioEl ? audioEl.muted : false),
-            currentSong: song ? {
+
+        let currentSong = null;
+        if (song) {
+            currentSong = {
                 name: song.name || '',
                 singer: song.singer || '',
                 album: song.albumName || song.album || '',
                 duration: song.duration || (audioEl ? audioEl.duration : 0) || 0,
                 songId: song.songId || song.id || song.songmid || '',
                 source: song.source || '',
-            } : null,
+                picUrl: song.picUrl || song.img || song.pic || '',
+                img: song.img || song.pic || '',
+                pic: song.pic || '',
+                songmid: song.songmid || song.songId || '',
+                hash: song.hash || '',
+                interval: song.interval || '',
+                copyrightId: song.copyrightId || '',
+                albumId: song.albumId || '',
+                types: song.types || [],
+            };
+        }
+
+        const playlist = (typeof window !== 'undefined' && window.currentPlaylist || []).map(item => ({
+            name: item.name || '',
+            singer: item.singer || '',
+            songId: item.songId || item.id || '',
+            source: item.source || '',
+            duration: item.duration || 0,
+            picUrl: item.picUrl || item.img || item.pic || '',
+            img: item.img || item.pic || '',
+            pic: item.pic || '',
+        }));
+
+        return {
+            playing: audioEl ? !audioEl.paused : false,
+            position: audioEl ? (audioEl.currentTime || 0) : 0,
+            duration: audioEl ? (audioEl.duration || 0) : 0,
+            volume: Math.round((typeof currentVolume !== 'undefined' ? currentVolume : (audioEl ? audioEl.volume : 0.75)) * 100),
+            muted: (typeof isMuted !== 'undefined' ? isMuted : false) || (audioEl ? audioEl.muted : false),
             playMode: mapPlayModeToRemote(typeof playMode !== 'undefined' ? playMode : 'list'),
+            playbackRate: audioEl ? (audioEl.playbackRate || 1) : 1,
+            currentSong: currentSong,
+            currentIndex: typeof currentIndex !== 'undefined' ? currentIndex : 0,
+            playlist: playlist,
+            isFavorite: typeof getFavoriteStatus === 'function' ? getFavoriteStatus() : false,
         };
     };
 
@@ -125,6 +155,29 @@
                     }
                     break;
                 case 'clear_queue': if (typeof clearQueue === 'function') clearQueue(); break;
+                case 'set_playback_rate':
+                    if (typeof setPlaybackRate === 'function' && typeof params?.rate === 'number') {
+                        setPlaybackRate(params.rate);
+                    }
+                    break;
+                case 'remove_from_queue':
+                    if (typeof removeFromQueue === 'function' && typeof params?.index === 'number') {
+                        removeFromQueue(params.index);
+                    }
+                    break;
+                case 'reorder_queue':
+                    if (typeof reorderQueue === 'function' && typeof params?.fromIndex === 'number' && typeof params?.toIndex === 'number') {
+                        reorderQueue(params.fromIndex, params.toIndex);
+                    }
+                    break;
+                case 'set_sleep_timer':
+                    if (typeof setSleepTimer === 'function' && typeof params?.minutes === 'number') {
+                        setSleepTimer(params.minutes);
+                    }
+                    break;
+                case 'cancel_sleep_timer':
+                    if (typeof cancelSleepTimer === 'function') cancelSleepTimer();
+                    break;
                 case 'collect_current_song':
                 case 'uncollect_current_song':
                     if (typeof toggleFavorites === 'function') toggleFavorites();
@@ -165,14 +218,20 @@
                 }
                 break;
             case 'state_update':
-                if (P2PRemote.onStateUpdate && msg.data?.fromDevice) {
-                    P2PRemote.onStateUpdate(msg.data.state, msg.data.fromDevice);
+                if (msg.data?.fromDevice) {
+                    if (currentCastTarget && currentCastTarget.deviceInfo?.deviceId === msg.data.fromDevice.deviceId) {
+                        applyRemoteStateToPlayerBar(msg.data.state);
+                    }
+                    if (P2PRemote.onStateUpdate) P2PRemote.onStateUpdate(msg.data.state, msg.data.fromDevice);
                 }
                 break;
             case 'state_response':
                 // 被动连入设备的状态响应
-                if (P2PRemote.onStateUpdate && msg.data?.fromDevice) {
-                    P2PRemote.onStateUpdate(msg.data.state, msg.data.fromDevice);
+                if (msg.data?.fromDevice) {
+                    if (currentCastTarget && currentCastTarget.deviceInfo?.deviceId === msg.data.fromDevice.deviceId) {
+                        applyRemoteStateToPlayerBar(msg.data.state);
+                    }
+                    if (P2PRemote.onStateUpdate) P2PRemote.onStateUpdate(msg.data.state, msg.data.fromDevice);
                 }
                 break;
             case 'search_result':
@@ -183,10 +242,12 @@
                 break;
             case 'device_offline':
                 incomingDevices = msg.data?.devices || [];
+                updateCastUI();
                 if (P2PRemote.onConnectionChange) P2PRemote.onConnectionChange(getAllPeers());
                 break;
             case 'discovery_response':
                 incomingDevices = msg.data?.devices || [];
+                updateCastUI();
                 if (P2PRemote.onConnectionChange) P2PRemote.onConnectionChange(getAllPeers());
                 break;
         }
@@ -259,7 +320,8 @@
                             state.resolved = true;
                             peers.set(connId, { ws, deviceInfo: msg.data, state: null, lastStateStr: '' });
                             resolve(msg.data);
-                            if (P2PRemote.onConnectionChange) P2PRemote.onConnectionChange(getAllPeers());
+                            updateCastUI();
+                if (P2PRemote.onConnectionChange) P2PRemote.onConnectionChange(getAllPeers());
                             ws.send(JSON.stringify({ type: 'get_state', id: genId() }));
                         }
                         break;
@@ -286,6 +348,9 @@
                         const peer = peers.get(connId);
                         if (peer) {
                             peer.state = msg.data;
+                            if (currentCastTarget && currentCastTarget.connId === connId) {
+                                applyRemoteStateToPlayerBar(msg.data);
+                            }
                             if (P2PRemote.onStateUpdate) P2PRemote.onStateUpdate(msg.data, peer.deviceInfo);
                         }
                         break;
@@ -295,9 +360,12 @@
                         break;
                     case 'state_response': {
                         const peer = peers.get(connId);
-                        if (peer && P2PRemote.onStateUpdate) {
+                        if (peer) {
                             peer.state = msg.data;
-                            P2PRemote.onStateUpdate(msg.data, peer.deviceInfo);
+                            if (currentCastTarget && currentCastTarget.connId === connId) {
+                                applyRemoteStateToPlayerBar(msg.data);
+                            }
+                            if (P2PRemote.onStateUpdate) P2PRemote.onStateUpdate(msg.data, peer.deviceInfo);
                         }
                         break;
                     }
@@ -311,6 +379,7 @@
             ws.onerror = () => { if (!state.resolved) { state.resolved = true; reject(new Error('连接失败')); } };
             ws.onclose = () => {
                 peers.delete(connId);
+                updateCastUI();
                 if (P2PRemote.onConnectionChange) P2PRemote.onConnectionChange(getAllPeers());
             };
         });
@@ -485,6 +554,257 @@
         }, 30000);
     };
 
+    // ===== 投屏模式 =====
+    let currentCastTarget = null; // { connId, deviceInfo }
+
+    const setCastTarget = (connId) => {
+        if (connId === null) {
+            currentCastTarget = null;
+            restoreLocalPlayerBar();
+        } else {
+            const peer = peers.get(connId);
+            const incoming = (incomingDevices || []).find(d => d.connId === connId);
+            if (peer) {
+                currentCastTarget = { connId, deviceInfo: peer.deviceInfo, direction: 'outgoing' };
+                requestState(connId);
+            } else if (incoming) {
+                currentCastTarget = { connId, deviceInfo: incoming.device, direction: 'incoming' };
+                requestState(connId);
+            } else {
+                return;
+            }
+        }
+        updateCastUI();
+        const menu = document.getElementById('cast-menu');
+        if (menu) menu.classList.add('hidden');
+    };
+
+    const toggleCastMenu = (e) => {
+        if (e) e.stopPropagation();
+        const menu = document.getElementById('cast-menu');
+        if (!menu) return;
+        menu.classList.toggle('hidden');
+        if (!menu.classList.contains('hidden')) {
+            renderCastMenu();
+        }
+    };
+
+    const renderCastMenu = () => {
+        const listEl = document.getElementById('cast-menu-list');
+        if (!listEl) return;
+        let html = `<div class="px-3 py-2 cursor-pointer hover:t-bg-main ${!currentCastTarget ? 't-text-primary font-medium' : 't-text-muted'}" onclick="P2PRemote.setCastTarget(null)">
+            <i class="fas fa-check mr-2 ${!currentCastTarget ? '' : 'opacity-0'}"></i>本机
+        </div><div class="border-t t-border-main"></div>`;
+        const allPeers = getAllPeers();
+        if (allPeers.length === 0) {
+            html += `<div class="px-3 py-2 text-xs t-text-muted text-center">未连接设备</div>`;
+        } else {
+            for (const p of allPeers) {
+                const isCurrent = currentCastTarget && currentCastTarget.connId === p.connId;
+                const icon = p.deviceType === 'desktop' ? 'fa-desktop' : p.deviceType === 'mobile' ? 'fa-mobile-alt' : 'fa-globe';
+                html += `<div class="px-3 py-2 cursor-pointer hover:t-bg-main ${isCurrent ? 't-text-primary font-medium' : 't-text-muted'}" onclick="P2PRemote.setCastTarget('${p.connId}')">
+                    <i class="fas fa-check mr-2 ${isCurrent ? '' : 'opacity-0'}"></i><i class="fas ${icon} mr-1"></i>${p.name || '未知设备'}
+                </div>`;
+            }
+        }
+        listEl.innerHTML = html;
+    };
+
+    const updateCastUI = () => {
+        const btn = document.getElementById('btn-cast');
+        const label = document.getElementById('cast-target-label');
+        const nameSpan = document.getElementById('cast-target-name');
+        const allPeers = getAllPeers();
+
+        if (currentCastTarget) {
+            if (btn) btn.classList.remove('hidden');
+            if (label) {
+                label.classList.remove('hidden');
+                if (nameSpan) nameSpan.textContent = currentCastTarget.deviceInfo?.name || '未知设备';
+            }
+        } else if (allPeers.length > 0) {
+            if (btn) btn.classList.remove('hidden');
+            if (label) label.classList.add('hidden');
+        } else {
+            if (btn) btn.classList.add('hidden');
+            if (label) label.classList.add('hidden');
+        }
+    };
+
+    const onOutsideClick = (e) => {
+        const menu = document.getElementById('cast-menu');
+        const btn = document.getElementById('btn-cast');
+        if (!menu || menu.classList.contains('hidden')) return;
+        if (menu.contains(e.target) || (btn && btn.contains(e.target))) return;
+        menu.classList.add('hidden');
+    };
+
+    const applyRemoteStateToPlayerBar = (state) => {
+        if (!currentCastTarget) return;
+
+        P2PRemote._updatingFromRemote = true;
+
+        const titleEl = document.getElementById('player-title');
+        const artistEl = document.getElementById('player-artist');
+        const coverEl = document.getElementById('player-cover') || document.querySelector('#player-song-info img');
+        const progressBar = document.getElementById('progress-bar');
+        const timeCurrent = document.getElementById('time-current');
+        const timeTotal = document.getElementById('time-total');
+        const playIcon = document.querySelector('#btn-play i');
+        const volumeBar = document.getElementById('volume-bar');
+        const volumeIcon = document.getElementById('volume-icon');
+        const modeBtn = document.getElementById('btn-play-mode');
+        const favBtn = document.getElementById('player-like-btn');
+        const rateDisplay = document.getElementById('playback-rate-display');
+
+        if (state.currentSong) {
+            if (titleEl) {
+                titleEl.textContent = state.currentSong.name || '暂无播放';
+                titleEl.setAttribute('data-text', state.currentSong.name || '暂无播放');
+            }
+            if (artistEl) {
+                artistEl.textContent = state.currentSong.singer || '';
+                artistEl.setAttribute('data-text', state.currentSong.singer || '');
+            }
+
+            const coverUrl = state.currentSong.picUrl || state.currentSong.img || state.currentSong.pic || '';
+            if (coverEl && coverUrl) {
+                if (coverEl.tagName === 'IMG') {
+                    coverEl.src = coverUrl;
+                } else {
+                    coverEl.style.backgroundImage = `url(${coverUrl})`;
+                }
+            }
+        }
+
+        if (typeof state.playing === 'boolean' && playIcon) {
+            playIcon.className = state.playing ? 'fas fa-pause text-xl md:text-2xl' : 'fas fa-play ml-1 text-xl md:text-2xl';
+        }
+
+        if (state.duration > 0 && progressBar && !P2PRemote._seekDragging) {
+            progressBar.style.width = (state.position / state.duration * 100) + '%';
+        }
+        if (timeCurrent) timeCurrent.textContent = formatTime(state.position || 0);
+        if (timeTotal) timeTotal.textContent = formatTime(state.duration || 0);
+
+        if (typeof state.volume === 'number') {
+            const displayVol = state.muted ? 0 : state.volume;
+            if (volumeBar) volumeBar.style.width = displayVol + '%';
+            if (volumeIcon) {
+                if (state.muted || state.volume === 0) {
+                    volumeIcon.className = 'fas fa-volume-mute w-4';
+                } else if (state.volume < 50) {
+                    volumeIcon.className = 'fas fa-volume-down w-4';
+                } else {
+                    volumeIcon.className = 'fas fa-volume-up w-4';
+                }
+            }
+        }
+
+        if (modeBtn) {
+            const modeIconMap = { loop_list: 'fa-repeat', loop_single: 'fa-1', shuffle: 'fa-shuffle', sequential: 'fa-arrow-right-long' };
+            const icon = modeBtn.querySelector('i');
+            if (icon) icon.className = 'fas ' + (modeIconMap[state.playMode] || 'fa-repeat');
+        }
+
+        if (favBtn) {
+            const icon = favBtn.querySelector('i');
+            if (icon) {
+                icon.className = state.isFavorite ? 'fas fa-heart text-red-500 text-base md:text-lg' : 'fas fa-heart text-gray-300 text-base md:text-lg';
+            }
+        }
+
+        if (rateDisplay) rateDisplay.textContent = state.playbackRate + 'x';
+
+        updateCastModeButtons();
+
+        setTimeout(() => { P2PRemote._updatingFromRemote = false; }, 50);
+    };
+
+    const updateCastModeButtons = () => {
+        const isCast = !!currentCastTarget;
+        const hideIds = ['btn-download', 'btn-lyric-card', 'btn-equalizer', 'btn-visualizer'];
+        hideIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (isCast) el.classList.add('hidden');
+                else el.classList.remove('hidden');
+            }
+        });
+        if (isCast) document.body.classList.add('cast-mode');
+        else document.body.classList.remove('cast-mode');
+    };
+
+    const restoreLocalPlayerBar = () => {
+        const song = typeof window !== 'undefined' && window.currentPlayingSong;
+        const audioEl = typeof audio !== 'undefined' ? audio : null;
+
+        if (song) {
+            const titleEl = document.getElementById('player-title');
+            const artistEl = document.getElementById('player-artist');
+            if (titleEl) {
+                titleEl.textContent = song.name || '';
+                titleEl.setAttribute('data-text', song.name || '');
+            }
+            if (artistEl) {
+                artistEl.textContent = song.singer || '';
+                artistEl.setAttribute('data-text', song.singer || '');
+            }
+
+            const coverUrl = song.picUrl || song.img || song.pic || '';
+            const coverEl = document.getElementById('player-cover') || document.querySelector('#player-song-info img');
+            if (coverEl && coverUrl) {
+                if (coverEl.tagName === 'IMG') {
+                    coverEl.src = coverUrl;
+                } else {
+                    coverEl.style.backgroundImage = `url(${coverUrl})`;
+                }
+            }
+        }
+
+        if (audioEl) {
+            const playIcon = document.querySelector('#btn-play i');
+            if (playIcon) {
+                playIcon.className = !audioEl.paused ? 'fas fa-pause text-xl md:text-2xl' : 'fas fa-play ml-1 text-xl md:text-2xl';
+            }
+
+            if (audioEl.duration) {
+                const progressBar = document.getElementById('progress-bar');
+                const timeCurrent = document.getElementById('time-current');
+                const timeTotal = document.getElementById('time-total');
+                if (progressBar) progressBar.style.width = (audioEl.currentTime / audioEl.duration * 100) + '%';
+                if (timeCurrent) timeCurrent.textContent = formatTime(audioEl.currentTime);
+                if (timeTotal) timeTotal.textContent = formatTime(audioEl.duration);
+            }
+        }
+
+        if (typeof updateVolumeUI === 'function') updateVolumeUI();
+
+        if (typeof updatePlayModeUI === 'function') updatePlayModeUI();
+
+        if (song && typeof updatePlayerInfo === 'function') {
+            updatePlayerInfo(song);
+        }
+
+        if (typeof updatePlaybackRateUI === 'function') updatePlaybackRateUI();
+
+        const hideIds = ['btn-download', 'btn-lyric-card', 'btn-equalizer', 'btn-visualizer'];
+        hideIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('hidden');
+        });
+
+        document.body.classList.remove('cast-mode');
+        P2PRemote._updatingFromRemote = false;
+    };
+
+    const formatTime = (sec) => {
+        sec = Math.floor(sec || 0);
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
     const requestState = (connId) => {
         const peer = peers.get(connId);
         if (peer && peer.ws.readyState === 1) {
@@ -517,6 +837,7 @@
 
         connectBridge();
         startHeartbeat();
+        document.addEventListener('click', onOutsideClick, true);
         LOG.info('P2P Remote module initialized, deviceId:', P2PRemote.localDeviceId);
     };
 
@@ -529,16 +850,22 @@
     window.P2PRemote = {
         localDeviceId: '',
         version: '1.9.5',
+        _updatingFromRemote: false,
+        _seekDragging: false,
         connectTo,
         sendCommand,
         sendSearch,
         requestState,
         disconnect,
         getPeerList: getAllPeers,
+        getPeer: (connId) => peers.get(connId) || null,
         scanDevices,
         getLocalState,
         broadcastLocalState,
         isBridgeConnected: () => bridgeConnected,
+        setCastTarget,
+        toggleCastMenu,
+        get currentCastTarget() { return currentCastTarget; },
         onConnectionChange: null,
         onStateUpdate: null,
         onSearchResult: null,
